@@ -1,0 +1,43 @@
+{
+  "name": "WCAG Contrast checker",
+  "description": "To test the color under WCAG accessibility requirements",
+  "author": "Rumoroso",
+  "manifest_version": 2,
+  "version": "2.0.0",
+  "background": {
+    "scripts": [
+      "background.js"
+    ]
+  },
+  "permissions": [
+    "<all_urls>",
+    "activeTab",
+    "storage"
+  ],
+  "browser_action": {
+    "default_icon": {
+      "32": "icons/icon_overlay.png"
+    },
+    "default_title": "WCAG Contrast checker"
+  },
+  "web_accessible_resources": [
+    "html/*"
+  ],
+  "options_ui": {
+    "page": "options/options.html",
+    "chrome_style": true
+  },
+  "commands": {
+    "_execute_browser_action": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+C"
+      }
+    }
+  },
+  "applications": {
+    "gecko": {
+      "id": "colorchecker@colorcheckerniquelao.net",
+      "strict_min_version": "58.0a1"
+    }
+  }
+}

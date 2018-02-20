@@ -1,0 +1,39 @@
+<!ENTITY colorchecker_niquelao.title "WCAG Contrast Checker">
+<!ENTITY colorchecker_niquelao.optTitle "WCAG Contrast Checker">
+<!ENTITY colorchecker.commandkey "C">
+<!ENTITY colorchecker_open.modifierskey "alt">
+<!ENTITY colorchecker_head.modifierskey "alt">
+<!ENTITY colorchecker.title "Colour">
+<!ENTITY colorchecker.fore "Foregr.">
+<!ENTITY colorchecker.back "Backgr.">
+<!ENTITY colorchecker.orig "From">
+<!ENTITY colorchecker.code "RGB code">
+<!ENTITY colorchecker.normal "Normal vision">
+<!ENTITY colorchecker.level "Level">
+<!ENTITY colorchecker.text "Text">
+<!ENTITY colorchecker.ejemplos "sample text">
+<!ENTITY colorchecker.small "small">
+<!ENTITY colorchecker.large "large">
+<!ENTITY colorchecker.selector "Element selector">
+<!ENTITY colorchecker.doc "Document">
+<!ENTITY colorchecker.elementos "Elements">
+<!ENTITY colorchecker.elem "By element">
+<!ENTITY colorchecker.analizar1 "Test (WCAG 1)">
+<!ENTITY colorchecker.analizar2 "Test (WCAG 2)">
+<!ENTITY colorchecker.nivelAA "Level AA">
+<!ENTITY colorchecker.nivelAAA "Level AAA">
+<!ENTITY colorchecker.color "Brightness">
+<!ENTITY colorchecker.brillo "Contrast">
+<!ENTITY colorchecker.ratio "Luminosity">
+<!ENTITY colorchecker.umbralA "Threshold A:">
+<!ENTITY colorchecker.umbralB "Threshold B:">
+<!ENTITY colorchecker.sizeNormal "normal:">
+<!ENTITY colorchecker.sizeNormalA "	small if: font-size &lt; threshold B">
+<!ENTITY colorchecker.sizeNormalB "	large if: Lim B &lt;= font-size">
+<!ENTITY colorchecker.sizeBold "bold:">
+<!ENTITY colorchecker.sizeBoldA "	small if: font-size &lt;  threshold A">
+<!ENTITY colorchecker.sizeBoldB "	large if: Lim B &lt;= font-size">
+<!ENTITY colorchecker.wcag1Val "Show results for WCAG 1">
+<!ENTITY colorchecker.captura "Download capture">
+<!ENTITY colorchecker.colorSelector "Color selector">
+
