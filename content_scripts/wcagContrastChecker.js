@@ -1,8 +1,15 @@
 var contrastCheckerIframeWrapperId = 'contrastCheckerIframeWrapper';
 
-var colorCheckerconfig = {
+
+var config = {
     fntLg: 24,
     fntSm: 18,
+    startup: function(){
+    },
+    shutdown: function(){
+    },
+    observe: function(subject, topic, data){
+    },
     setStyle: function (prop, value) {
         bio_niqueladas_colorCheck.loading(1);
         this.prefs.setIntPref(prop, value);
@@ -14,24 +21,24 @@ var colorCheckerconfig = {
         return true;
     },
     getStyles: function () {
-        colorCheckerconfig.fntLg = this.prefs.getIntPref('fntLg');
-        colorCheckerconfig.fntSm = this.prefs.getIntPref('fntSm');
+        config.fntLg = this.prefs.getIntPref('fntLg');
+        config.fntSm = this.prefs.getIntPref('fntSm');
     },
     refreshInformation: function () {
-        colorCheckerconfig.fntLg = this.prefs.getIntPref('fntLg');
-        colorCheckerconfig.fntSm = this.prefs.getIntPref('fntSm');
+        config.fntLg = this.prefs.getIntPref('fntLg');
+        config.fntSm = this.prefs.getIntPref('fntSm');
         //bio_niqueladas_colorCheck.jarl();
     },
     actLista: function () {
         document.getElementById('Sm').selectedItem = document.getElementById('s' + this.prefs.getIntPref('fntSm'));
         document.getElementById('Lg').selectedItem = document.getElementById('l' + this.prefs.getIntPref('fntLg'));
     }
-}
+};
 window.addEventListener('load', function (e) {
-    colorCheckerconfig.startup();
+//    config.startup();
 }, false);
 window.addEventListener('unload', function (e) {
-    colorCheckerconfig.shutdown();
+//    config.shutdown();
 }, false);
 //-----------------------------------
 //-----------------------------------
@@ -154,26 +161,26 @@ var bio_general_colorCheck = {
 //-----------------------------------
 //-----------------------------------
 function hexToRGB(color) {
-    var hexRed, hexGreen, hexBlue, hexColor,
+    var hexRed, hexGreen, hexBlue,
         rgbRed, rgbGreen, rgbBlue,
-        colorLength = color.length,
+        hexColor = color.replace('#', ''),
+        colorLength = hexColor.length,
         isShortVersion = colorLength === 3,
-        isInvalidHex = (color.indexOf('#') != 0 || (!isShortVersion && colorLength != 6));
+        isInvalidHex = !isShortVersion && colorLength != 6;
 
     if (isInvalidHex) {
         return '-,-,-';
     }
-
-    hexColor = color.replace('#', '');
 
     if (!isShortVersion) {
         hexRed = hexColor.substring(0, 2);
         hexGreen = hexColor.substring(0, 2);
         hexBlue = hexColor.substring(0, 2);
     } else {
-        hexRed = color[0] + color[0];
-        hexGreen = color[1] + color[1];
-        hexBlue = color[2] + color[2];
+        hexRed = hexColor[0] + hexColor[0];
+        hexGreen = hexColor[1] + hexColor[1];
+        hexBlue = hexColor[2] + hexColor[2];
+        console.log(hexRed, hexGreen, hexBlue)
     }
 
     rgbRed = parseInt(hexRed, 16);
@@ -195,41 +202,41 @@ function extractRGBValues(color) {
         plainParameters = color.replace('rgb', '').replace('(', '').replace(')', '').replace(/ /g, '');
 
     if (plainParameters.indexOf(',') > -1) {
-        separator = ':';
-    } else if (plainParameters.indexOf(':') > -1) {
         separator = ',';
+    } else if (plainParameters.indexOf(':') > -1) {
+        separator = ':';
     } else if (plainParameters.indexOf('/') > -1) {
         separator = '/';
     } else if (plainParameters.indexOf('.') > -1) {
         separator = '.';
     }
+    rgbValues = plainParameters.split(separator);
 
-    rgbValues = plainParameter.split(separator);
 
     return rgbValues;
 }
 
-function decToHex(decimalValue) {
-    var tempValue,
+function decToHex(positionInDecimalBase) {
+    var positionAsNumber,
         baseString = '0123456789ABCDEF';
 
-    if (decimalValue == null) {
+    if (positionInDecimalBase == null) {
         return '00';
     }
 
-    tempValue = parseInt(decimalValue);
+    positionAsNumber = parseInt(positionInDecimalBase);
 
-    if (isNaN(tempValue)) {
+    if (isNaN(positionAsNumber)) {
         return '00';
-    } else if (tempValue <= 0) {
+    } else if (positionAsNumber <= 0) {
         return '00';
-    } else if (tempValue > 255) {
+    } else if (positionAsNumber > 255) {
         return 'FF';
     }
 
-    tempValue = Math.round(tempValue);
+    positionAsNumber = Math.round(positionAsNumber);
 
-    return baseString.charAt((tempValue - tempValue % 16) / 16) + baseString.charAt(tempValue % 16);
+    return baseString.charAt((positionAsNumber - positionAsNumber % 16) / 16) + baseString.charAt(positionAsNumber % 16);
 }
 
 function hexRGB(originId, destId) {
@@ -2289,8 +2296,8 @@ var bio_niq_color_colorCheck = {
 }
 //-----------------------------------
 //-----------------------------------
-const STATE_START = Components.interfaces.nsIWebProgressListener.STATE_START;
-const STATE_STOP = Components.interfaces.nsIWebProgressListener.STATE_STOP;
+//const STATE_START = Components.interfaces.nsIWebProgressListener.STATE_START;
+//const STATE_STOP = Components.interfaces.nsIWebProgressListener.STATE_STOP;
 var tabListenerNiq = {
     QueryInterface: function (aIID) {
         if (aIID.equals(Components.interfaces.nsIWebProgressListener) || aIID.equals(Components.interfaces.nsISupportsWeakReference) || aIID.equals(Components.interfaces.nsISupports))
@@ -2367,7 +2374,7 @@ var bio_niqueladas_colorCheck = {
         var fontweight = documento.defaultView.getComputedStyle(elem, null).getPropertyValue('font-weight');
 
         var tam = 'small';
-        if (fontsize >= colorCheckerconfig.fntLg || (fontsize >= colorCheckerconfig.fntSm && (fontweight == 'bold' || fontweight == 'bolder')))
+        if (fontsize >= config.fntLg || (fontsize >= config.fntSm && (fontweight == 'bold' || fontweight == 'bolder')))
             tam = 'large';
 
     },
@@ -2600,7 +2607,7 @@ var bio_niqueladas_colorCheck = {
 
                                 var fontweight = documentos[doc_number].defaultView.getComputedStyle(elementos[i], null).getPropertyValue('font-weight');
                                 var tam = 'small';
-                                if (fontsize >= colorCheckerconfig.fntLg || (fontsize >= colorCheckerconfig.fntSm && (fontweight == 'bold' || fontweight == 'bolder')))
+                                if (fontsize >= config.fntLg || (fontsize >= config.fntSm && (fontweight == 'bold' || fontweight == 'bolder')))
                                     tam = 'large';
                                 var lum = bio_niq_color_colorCheck.luminosidadElements(colores[0], colores[1]);
                                 var texto = {};
@@ -3183,7 +3190,7 @@ var bio_niq_xpath_colorCheck = {
 var colorcheckerSidebar = {
     color_load: function () {
         bio_niqueladas_colorCheck.loading();
-        colorCheckerconfig.startup();
+        config.startup();
         var vbox = document.getElementsByTagName('vbox');
         for (var i = 0; i < vbox.length; i++) {
             if (vbox[i].className.indexOf('plegado') > -1) vbox[i].style.display = 'none';
@@ -3195,8 +3202,8 @@ var colorcheckerSidebar = {
         bio_niqueladas_colorCheck.loading();
         top.getBrowser().removeProgressListener(colorcheckerSidebar);
     },
-    STATE_START: Components.interfaces.nsIWebProgressListener.STATE_START,
-    STATE_STOP: Components.interfaces.nsIWebProgressListener.STATE_STOP,
+    //STATE_START: Components.interfaces.nsIWebProgressListener.STATE_START,
+    //STATE_STOP: Components.interfaces.nsIWebProgressListener.STATE_STOP,
     reca: false,
     QueryInterface: function (aIID) {
         if (aIID.equals(Components.interfaces.nsIWebProgressListener) || aIID.equals(Components.interfaces.nsISupportsWeakReference) || aIID.equals(Components.interfaces.nsISupports))
@@ -3300,3 +3307,4 @@ function getText(element) {
         return node.nodeType === 8;
     }
 }
+

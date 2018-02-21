@@ -1,0 +1,21 @@
+﻿<html>
+<head></head>
+
+<body>
+<label> Hex
+<input onblur="updateSecond(this.value)" id="first" />
+</label>
+<label>RGB
+	<input onblur="updateFirst(this.value)" id="second" />
+</label>
+<script src="wcagContrastChecker.js"></script>
+<script>
+	function updateSecond(color){
+	    document.getElementById('second').value = hexToRGB(color);
+	}
+	function updateFirst(color){
+	    document.getElementById('first').value = RGBToHex(color);
+	}
+</script>
+</body>
+</html>
