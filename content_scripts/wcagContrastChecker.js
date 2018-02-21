@@ -4,11 +4,11 @@ var contrastCheckerIframeWrapperId = 'contrastCheckerIframeWrapper';
 var config = {
     fntLg: 24,
     fntSm: 18,
-    startup: function(){
+    startup: function () {
     },
-    shutdown: function(){
+    shutdown: function () {
     },
-    observe: function(subject, topic, data){
+    observe: function (subject, topic, data) {
     },
     setStyle: function (prop, value) {
         bio_niqueladas_colorCheck.loading(1);
@@ -160,41 +160,25 @@ var bio_general_colorCheck = {
 }
 //-----------------------------------
 //-----------------------------------
-function hexToRGB(color) {
-    var hexRed, hexGreen, hexBlue,
-        rgbRed, rgbGreen, rgbBlue,
-        hexColor = color.replace('#', ''),
-        colorLength = hexColor.length,
-        isShortVersion = colorLength === 3,
-        isInvalidHex = !isShortVersion && colorLength != 6;
+function hexToRGB(hex) {
+    var shorthandRegex = /^#?([a-f\d])([a-f\d])([a-f\d])$/i;
 
-    if (isInvalidHex) {
-        return '-,-,-';
-    }
+    hex = hex.replace(shorthandRegex, function (m, r, g, b) {
+        return r + r + g + g + b + b;
+    });
 
-    if (!isShortVersion) {
-        hexRed = hexColor.substring(0, 2);
-        hexGreen = hexColor.substring(0, 2);
-        hexBlue = hexColor.substring(0, 2);
-    } else {
-        hexRed = hexColor[0] + hexColor[0];
-        hexGreen = hexColor[1] + hexColor[1];
-        hexBlue = hexColor[2] + hexColor[2];
-        console.log(hexRed, hexGreen, hexBlue)
-    }
-
-    rgbRed = parseInt(hexRed, 16);
-    rgbGreen = parseInt(hexGreen, 16);
-    rgbBlue = parseInt(hexBlue, 16);
-
-    return rgbRed + ',' + rgbGreen + ',' + rgbBlue;
+    var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? {
+        r: parseInt(result[1], 16),
+        g: parseInt(result[2], 16),
+        b: parseInt(result[3], 16)
+    } : null;
 }
 
 function RGBToHex(RGBColor) {
-    var RGBValues = extractRGBValues(RGBColor),
-        hexColor = '#' + decToHex(RGBValues[0]) + decToHex(RGBValues[1]) + decToHex(RGBValues[2]);
+    var RGBValues = extractRGBValues(RGBColor);
 
-    return hexColor;
+    return '#' + decToHex(RGBValues[0]) + decToHex(RGBValues[1]) + decToHex(RGBValues[2]);
 }
 
 function extractRGBValues(color) {
@@ -240,9 +224,10 @@ function decToHex(positionInDecimalBase) {
 }
 
 function hexRGB(originId, destId) {
-    var color = document.getElementById(originId).value;
+    var color = document.getElementById(originId).value,
+        rgb = hexToRGB(color);
 
-    document.getElementById(destId).value = hexToRGB(color);
+    document.getElementById(destId).value = 'rgb(' + rgb.r + ',' + rgb.g + ',' + rgb.b + ')';
 }
 
 function RGBhex(originId, destId) {

@@ -3,18 +3,24 @@
 
 <body>
 <label> Hex
-<input onblur="updateSecond(this.value)" id="first" />
+<input onblur="updateSecond(this.value)" id="hex" />
 </label>
-<label>RGB
-	<input onblur="updateFirst(this.value)" id="second" />
-</label>
+<label>RGB<input onblur="updateFirst(this.value)" id="RGB" /></label>
+<label>R<input id="R" /></label>
+<label>G<input id="G" /></label>
+<label>B<input id="B" /></label>
 <script src="wcagContrastChecker.js"></script>
 <script>
 	function updateSecond(color){
-	    document.getElementById('second').value = hexToRGB(color);
+	    var rgb = hexToRGB(color);
+
+	    document.getElementById('R').value = rgb.r ;
+	    document.getElementById('G').value = rgb.g;
+	    document.getElementById('B').value = rgb.b;
+	    document.getElementById('RGB').value = 'rgb(' + rgb.r + ',' + rgb.g + ',' + rgb.b + ')';
 	}
 	function updateFirst(color){
-	    document.getElementById('first').value = RGBToHex(color);
+	    document.getElementById('hex').value = RGBToHex(color);
 	}
 </script>
 </body>
