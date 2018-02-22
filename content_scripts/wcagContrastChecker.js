@@ -237,6 +237,65 @@ function RGBhex(originId, destId) {
     document.getElementById(destId).value = '#' + decToHex(values[0]) + decToHex(values[1]) + decToHex(values[2]);
 }
 
+// WCAG 2.0 color test
+function contrastDiff(foreground, background) {
+    var higherValue, lowerValue, contrastDiff,
+        foregroundLuminosity = bio_niq_color_colorCheck.obtenluminosidad(foreground.red, foreground.green, foreground.blue, 255),
+        backgroundLuminosity = bio_niq_color_colorCheck.obtenluminosidad(background.red, background.green, background.blue, 255);
+
+    if (foregroundLuminosity > backgroundLuminosity) {
+        higherValue = foregroundLuminosity;
+        lowerValue = backgroundLuminosity;
+    } else {
+        higherValue = backgroundLuminosity;
+        lowerValue = foregroundLuminosity;
+    }
+    contrastDiff = (higherValue + 0.05) / (lowerValue + 0.05);
+    contrastDiff = Math.round(contrastDiff * 100) / 100; // round to two decimals
+
+    return contrastDiff;
+
+    // evaluation according to the different thresholds
+    // if (contrastDiff) {
+    //     if (contrastDiff < 3) {
+    //         return 'error';
+    //     }
+    //     else if (contrastDiff < 4.5) {
+    //         return 'ok';
+    //     }
+    //     else if (contrastDiff < 7) {
+    //         return 'ok';
+    //     }
+    //     else if (contrastDiff >= 7) {
+    //         return 'ok';
+    //     }
+    // } else {
+    //         return '-';
+    // }
+}
+
+// WCAG 1.0 color test
+function getBrightness(rgbColorParams) {
+    var brightness = ((rgbColorParams.red * 299) + (rgbColorParams.green * 587) + (rgbColorParams.blue * 114)) / 1000;
+
+    return brightness;
+}
+
+// WCAG 1.0 color test
+function getBrightnessDiff(foreground, background) {
+    var brightnessForeground = getBrightness(foreground),
+        brightnessBackground = getBrightness(background);
+
+    return parseInt(Math.abs(brightnessBackground - brightnessForeground), 10);
+    // limit: 125
+}
+
+function getColorDiff(foreground, background) {
+    return Math.abs(background.red - foreground.red) + Math.abs(background.green - foreground.green) + Math.abs(background.blue - foreground.blue);
+    // limit: 500
+}
+
+
 var bio_niq_color_colorCheck = {
     colorpickerDest: 'c_texto',
     colorWheelDest: 'c_texto',
@@ -320,71 +379,16 @@ var bio_niq_color_colorCheck = {
         fondo.red = valoresfondo[0];
         fondo.green = valoresfondo[1];
         fondo.blue = valoresfondo[2];
-        bio_niq_color_colorCheck.luminosidad(texto, fondo, destAAg);
-        bio_niq_color_colorCheck.brilloDif(destbri, texto, fondo);
-        bio_niq_color_colorCheck.colorDif(destcol, texto, fondo);
-    },
-    obtenBrillo: function (colores) {
-        var brillo = ((colores.red * 299) + (colores.green * 587) + (colores.blue * 114)) / 1000;
-        return brillo;
-    },
-    brilloDif: function (dest, primerPlano, segundoPlano) {
-        var brilloPrimerPlano = bio_niq_color_colorCheck.obtenBrillo(primerPlano);
-        var brilloSegundoPlano = bio_niq_color_colorCheck.obtenBrillo(segundoPlano);
-        var diferenciaBrillo = parseInt(Math.abs(brilloSegundoPlano - brilloPrimerPlano), 10);
-        var contr_bri = document.getElementById(dest);
-        if (contr_bri) {
-            var contr_bri_dif = 1;
-            var porcentaje = '%';
-            if (diferenciaBrillo >= (125 * contr_bri_dif)) {
-                //			contr_bri.className = 'ok';
-                //			contr_bri.setAttribute('src', 'chrome://colorchecker/content/img/ok.png');
-                contr_bri.setAttribute('label', diferenciaBrillo)
-                contr_bri.setAttribute('value', diferenciaBrillo)
-            } else if (diferenciaBrillo < (125 * contr_bri_dif)) {
-                //			contr_bri.className = 'error';
-                //			contr_bri.setAttribute('src', 'chrome://colorchecker/content/img/error.png');
-                contr_bri.setAttribute('label', diferenciaBrillo)
-                contr_bri.setAttribute('value', diferenciaBrillo)
-            } else {
-                //			contr_bri.className = '';
-                contr_bri.setAttribute('label', '-');
-                contr_bri.setAttribute('value', '-')
-                //			contr_bri.removeAttribute('src');
-            }
-        }
-        return 0;
-    },
-    colorDif: function (dest, primerPlano, segundoPlano) {
-        var diferenciaColor = Math.abs(segundoPlano.red - primerPlano.red) + Math.abs(segundoPlano.green - primerPlano.green) + Math.abs(segundoPlano.blue - primerPlano.blue);
-        var contr_col = document.getElementById(dest);
-        if (contr_col) {
-            var contr_col_dif = 1;
-            var porcentaje = '%';
-            if (diferenciaColor >= (500 * contr_col_dif)) {
-                //			contr_col.className = 'ok';
-                //			contr_col.setAttribute('src', 'chrome://colorchecker/content/img/ok.png');
-                contr_col.setAttribute('label', diferenciaColor)
-                contr_col.setAttribute('value', diferenciaColor)
-            } else if (diferenciaColor < (500 * contr_col_dif)) {
-                //			contr_col.className = 'error';
-                //			contr_col.setAttribute('src', 'chrome://colorchecker/content/img/error.png');
-                contr_col.setAttribute('label', diferenciaColor)
-                contr_col.setAttribute('value', diferenciaColor)
-            } else {
-                //			contr_col.className = '';
-                contr_col.setAttribute('label', '-');
-                contr_col.setAttribute('value', '-')
-                //			contr_col.removeAttribute('src');
-            }
-        }
-        return 0;
+        contrastDiff(texto, fondo, destAAg);
+        document.getElementById(destbri).value = getBrightnessDiff(texto, fondo);
+        document.getElementById(destcol).value = getColorDiff(texto, fondo);
     },
     obtenluminosidad: function (fRed, fGreen, fBlue, fFullScale) {
-        var fRedRGB = fRed / fFullScale;
-        var fGreenRGB = fGreen / fFullScale;
-        var fBlueRGB = fBlue / fFullScale;
-        var fLinearisedRed, fLinearisedGreen, fLinearisedBlue;
+        var fRedRGB = fRed / fFullScale,
+            fGreenRGB = fGreen / fFullScale,
+            fBlueRGB = fBlue / fFullScale,
+            fLinearisedRed, fLinearisedGreen, fLinearisedBlue;
+
         if (fRedRGB <= 0.03928) {
             fLinearisedRed = fRedRGB / 12.92;
         } else {
@@ -445,41 +449,6 @@ var bio_niq_color_colorCheck = {
         }
 
 
-    },
-    luminosidad: function (primerPlano, segundoPlano, destAAg) {
-        var lum_primerPlano, lum_Fondo, mayor, menor, difluminosidad;
-        lum_primerPlano = bio_niq_color_colorCheck.obtenluminosidad(primerPlano.red, primerPlano.green, primerPlano.blue, 255);
-        lum_Fondo = bio_niq_color_colorCheck.obtenluminosidad(segundoPlano.red, segundoPlano.green, segundoPlano.blue, 255);
-        if (lum_primerPlano > lum_Fondo) {
-            mayor = lum_primerPlano;
-            menor = lum_Fondo;
-        } else {
-            mayor = lum_Fondo;
-            menor = lum_primerPlano;
-        }
-        difluminosidad = (mayor + 0.05) / (menor + 0.05);
-        difluminosidad = Math.round(difluminosidad * 100) / 100; // redondeo a dos decimales
-        if (difluminosidad) {
-            if (difluminosidad < 3) {
-                bio_niq_color_colorCheck.resultadosColor(difluminosidad, destAAg, 'error');
-                return 0;
-            }
-            else if (difluminosidad < 4.5) {
-                bio_niq_color_colorCheck.resultadosColor(difluminosidad, destAAg, 'ok');
-                return 1;
-            }
-            else if (difluminosidad < 7) {
-                bio_niq_color_colorCheck.resultadosColor(difluminosidad, destAAg, 'ok');
-                return 1;
-            }
-            else if (difluminosidad >= 7) {
-                bio_niq_color_colorCheck.resultadosColor(difluminosidad, destAAg, 'ok');
-                return 1;
-            }
-        } else {
-            bio_niq_color_colorCheck.resultadosColor('-', destAAg, '');
-        }
-        return 1;
     },
     luminosidadElements: function (primerPlano, segundoPlano) {
         var lum_primerPlano, lum_Fondo, mayor, menor, difluminosidad;
@@ -1634,57 +1603,6 @@ var bio_niq_color_colorCheck = {
 
                     }
                 }
-                /*
-                elementos = [];
-                elementos = documentos[doc_number].getElementsByTagName('embed');
-                for (var i = 0; i < elementos.length; i++) {
-                    if(elementos[i].getAttribute('class'))
-                        elementos[i].setAttribute('class',elementos[i].getAttribute('class').replace('bio_canvas',''));
-                    if(vision_tipo_index > 0){
-                        if(elementos[i].getAttribute('src')){
-                            cad += 'canvas.bio_canvas,video.bio_canvas{display:none;width:0;height0}';
-                            var src = elementos[i].getAttribute('src');
-                            totalizador_object++;
-                            bio_niq_color_colorCheck.bio_object[totalizador_object] = []
-                            bio_niq_color_colorCheck.bio_object[totalizador_object] = [elementos[i],'src',vision_tipo];
-                            cad += 'object.bio_canvas,embed.bio_canvas{display:none;width:0;height0}';
-                        }
-                    }
-                }
-                elementos = [];
-                elementos = documentos[doc_number].getElementsByTagName('object');
-                for (var i = 0; i < elementos.length; i++) {
-                    if(elementos[i].getAttribute('class'))
-                        elementos[i].setAttribute('class',elementos[i].getAttribute('class').replace('bio_canvas',''));
-                    if(vision_tipo_index > 0){
-                        if(elementos[i].getAttribute('data')){
-                            cad += 'canvas.bio_canvas,video.bio_canvas{display:none;width:0;height0}';
-                            var data = elementos[i].getAttribute('data');
-                            totalizador_object++;
-                            bio_niq_color_colorCheck.bio_object[totalizador_object] = []
-                            bio_niq_color_colorCheck.bio_object[totalizador_object] = [elementos[i],'data',vision_tipo];
-                            cad += 'object.bio_canvas,embed.bio_canvas{display:none;width:0;height0}';
-                        }else{
-                            subelementos = elementos[i].getElementsByTagName('embed');
-                            for (var i = 0; i < subelementos.length; i++) {
-                                if(subelementos[i].getAttribute('class'))
-                                    subelementos[i].setAttribute('class',subelementos[i].getAttribute('class').replace('bio_canvas',''));
-                                if(vision_tipo_index > 0){
-                                    if(subelementos[i].getAttribute('src')){
-                                        cad += 'canvas.bio_canvas,video.bio_canvas{display:none;width:0;height0}';
-                                        var src = subelementos[i].getAttribute('src');
-                                        totalizador_object++;
-                                        bio_niq_color_colorCheck.bio_object[totalizador_object] = []
-                                        bio_niq_color_colorCheck.bio_object[totalizador_object] = [subelementos[i],'src',vision_tipo];
-                                        cad += 'object.bio_canvas,embed.bio_canvas{display:none;width:0;height0}';
-                                    }
-                                }
-                            }
-
-                        }
-                    }
-                }
-                */
 
                 if (head && cad) {
                     if (documentos[doc_number].getElementById('bio_color_css'))
@@ -2594,19 +2512,19 @@ var bio_niqueladas_colorCheck = {
                                 var tam = 'small';
                                 if (fontsize >= config.fntLg || (fontsize >= config.fntSm && (fontweight == 'bold' || fontweight == 'bolder')))
                                     tam = 'large';
-                                var lum = bio_niq_color_colorCheck.luminosidadElements(colores[0], colores[1]);
+                                var lum = contrastDiffElements(colores[0], colores[1]);
                                 var texto = {};
                                 texto.red = colores[0].split(',')[0];
                                 texto.green = colores[0].split(',')[1];
                                 texto.blue = colores[0].split(',')[2];
 
-                                var brilloPrimerPlano = bio_niq_color_colorCheck.obtenBrillo(texto);
+                                var brilloPrimerPlano = getBrightness(texto);
 
                                 var fondo = {};
                                 fondo.red = colores[1].split(',')[0];
                                 fondo.green = colores[1].split(',')[1];
                                 fondo.blue = colores[1].split(',')[2];
-                                var brilloSegundoPlano = bio_niq_color_colorCheck.obtenBrillo(fondo);
+                                var brilloSegundoPlano = getBrightness(fondo);
 
                                 var diferenciaBrillo = parseInt(Math.abs(brilloSegundoPlano - brilloPrimerPlano), 10);
                                 var diferenciaColor = Math.abs(fondo.red - texto.red) + Math.abs(fondo.green - texto.green) + Math.abs(fondo.blue - texto.blue);
