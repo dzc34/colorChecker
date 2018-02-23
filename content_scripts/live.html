@@ -1,13 +1,22 @@
 ﻿<html>
-<head></head>
+<head>
+    <style>
+        .valid {
+            color: #009900;
+        }
+        .fail {
+            color: #990000;
+        }
+    </style>
+</head>
 
 <body>
 <fieldset>
     <legend>Color evaluation</legend>
-    <label for="foreground">Foreground (hex)<input id="foreground"/></label><input type="color" id="foreInput"
-                                                                                   onchange="setColor(this.value, 'foreground')"/><br/>
-    <label for="background">Background (hex)<input id="background"/></label><input type="color" id="backInput"
-                                                                                   onchange="setColor(this.value, 'background')"/><br/>
+    <label for="foreground">Foreground (hex)<input id="foreground" onchange="setColor(this.value, 'foreInput')" value="#000000"/></label>
+    <input type="color" id="foreInput" onchange="setColor(this.value, 'foreground')" value="#000000"/><br/>
+    <label for="background">Background (hex)<input id="background" onchange="setColor(this.value, 'backInput')" value="#FFFFFF"/></label>
+    <input type="color" id="backInput" onchange="setColor(this.value, 'background')" value="#FFFFFF"/><br/>
     <button onclick="evaluateColors()">Evaluate</button>
     <table>
         <caption>Results</caption>
@@ -28,7 +37,7 @@
                 <td id="backHex"></td>
                 <td class="contrast"></td>
                 <td class="brightness"></td>
-                <td class="colorDiff"></td>
+                <td class="colorDifference"></td>
             </tr>
             <tr>
                 <th>rgb</th>
@@ -36,23 +45,44 @@
                 <td id="backRGB"></td>
                 <td class="contrast"></td>
                 <td class="brightness"></td>
-                <td class="colorDiff"></td>
+                <td class="colorDifference"></td>
             </tr>
         </tbdy>
     </table>
+    <table>
+        <thead>
+        <tr>
+            <th>level</th>
+            <th>Contrast ratio</th>
+            <th>small</th>
+            <th>large</th>
+            <th>example</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+            <td>AA</td>
+            <td class="contrast"></td>
+            <td id="smallAA"></td>
+            <td id="largeAA"></td>
+            <td class="sampleText" style="font-size: 14pt">Lorem ipsum</td>
+        </tr>
+        <tr>
+            <td>AAA</td>
+            <td class="contrast"></td>
+            <td id="smallAAA"></td>
+            <td id="largeAAA"></td>
+            <td class="sampleText" style="font-size: 18pt">Lorem ipsum</td>
+        </tr>
+        </tbody>
+    </table>
 </fieldset>
-<!--<h2>Explanation</h2>-->
-<!--<p>Enter a foreground and background color in RGB hexadecimal format (e.g., #FD3 or #F7DA39) or choose a color using the-->
-    <!--color picker. The Lightness slider can be used to adjust the selected color.</p>-->
-<!--<p><a href="//www.w3.org/TR/WCAG20/">WCAG 2.0</a> level AA requires a contrast ratio of at least 4.5:1 for normal text-->
-    <!--and 3:1 for large text. Level AAA requires a contrast ratio of at least 7:1 for normal text and 4.5:1 for large-->
-    <!--text.</p>-->
-<!--<p>Large text is defined as 14 point (typically 18.66px) and bold or larger, or 18 point (typically 24px) or larger.</p>-->
 <script src="wcagContrastChecker.js"></script>
 <script>
+    evaluateColors();
+
     function setColor(color, id) {
         document.getElementById(id).value = color;
-        evaluateColors();
     }
 
     function evaluateColors() {
@@ -66,9 +96,18 @@
             backInput = document.getElementById('backInput'),
             contrast = document.querySelectorAll('.contrast'),
             brightness = document.querySelectorAll('.brightness'),
-            colorDiff = document.querySelectorAll('.colorDiff'),
+            colorDifference = document.querySelectorAll('.colorDifference'),
             foreRGBObject = hexToRGB(foregroundColor),
-            backRGBObject = hexToRGB(backgroundColor);
+            backRGBObject = hexToRGB(backgroundColor),
+            examples = document.querySelectorAll('.sampleText'),
+            contrastDiff = getContrastDiff(foreRGBObject, backRGBObject),
+            brightnessDiff = getBrightnessDiff(foreRGBObject, backRGBObject),
+            colorDiff = getColorDiff(foreRGBObject, backRGBObject),
+            isValidNormalAA = contrastDiff >= 4.5,
+            isValidNormalAAA = contrastDiff >= 3,
+            isValidLargeAA = contrastDiff >= 7,
+            isValidLargeAAA = contrastDiff >= 4.5;
+
         foreInput.value = shorthandHexToExtended(foregroundColor);
         backInput.value = shorthandHexToExtended(backgroundColor);
 
@@ -78,14 +117,27 @@
         backRGB.innerText = 'rgb(' + backRGBObject.r + ',' + backRGBObject.g + ',' + backRGBObject.b + ')';
 
         contrast.forEach(function (element) {
-            element.innerText = contrastDiff(foreRGBObject, backRGBObject) + ':1';
+            element.innerText = contrastDiff + ':1';
         });
         brightness.forEach(function (element) {
-            element.innerText = getBrightnessDiff(foreRGBObject, backRGBObject);
+            element.innerText = brightnessDiff;
         });
-        colorDiff.forEach(function (element) {
-            element.innerText = getColorDiff(foreRGBObject, backRGBObject);
+        colorDifference.forEach(function (element) {
+            element.innerText = colorDiff;
         });
+        examples.forEach(function (element) {
+            element.style.backgroundColor = backgroundColor;
+            element.style.color = foregroundColor;
+        });
+
+        document.getElementById('smallAA').className = isValidNormalAA ? 'valid' : 'fail';
+        document.getElementById('smallAA').innerText = isValidNormalAA ? 'Pass' : 'Fail';
+        document.getElementById('smallAAA').className = isValidNormalAAA ? 'valid' : 'fail';
+        document.getElementById('smallAAA').innerText = isValidNormalAAA ? 'Pass' : 'Fail';
+        document.getElementById('largeAA').className = isValidLargeAA ? 'valid' : 'fail';
+        document.getElementById('largeAA').innerText = isValidLargeAA ? 'Pass' : 'Fail';
+        document.getElementById('largeAAA').className = isValidLargeAAA ? 'valid' : 'fail';
+        document.getElementById('largeAAA').innerText = isValidLargeAAA ? 'Pass' : 'Fail';
     }
 </script>
 </body>

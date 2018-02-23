@@ -242,7 +242,7 @@ function RGBhex(originId, destId) {
 }
 
 // WCAG 2.0 color test
-function contrastDiff(foreground, background) {
+function getContrastDiff(foreground, background) {
     var higherValue, lowerValue, contrastDiff,
         foregroundLuminosity = bio_niq_color_colorCheck.obtenluminosidad(foreground.r, foreground.g, foreground.b, 255),
         backgroundLuminosity = bio_niq_color_colorCheck.obtenluminosidad(background.r, background.g, background.b, 255);
@@ -261,17 +261,17 @@ function contrastDiff(foreground, background) {
 
     // Large text is defined as 14 point (typically 18.66px) and bold or larger, or 18 point (typically 24px) or larger.
     // evaluation according to the different thresholds
-    // if (contrastDiff) {
-    //     if (contrastDiff < 3) {
+    // if (getContrastDiff) {
+    //     if (getContrastDiff < 3) {
     //         return 'error';
     //     }
-    //     else if (contrastDiff < 4.5) {
+    //     else if (getContrastDiff < 4.5) {
     //         return 'ok';
     //     }
-    //     else if (contrastDiff < 7) {
+    //     else if (getContrastDiff < 7) {
     //         return 'ok';
     //     }
-    //     else if (contrastDiff >= 7) {
+    //     else if (getContrastDiff >= 7) {
     //         return 'ok';
     //     }
     // } else {
@@ -384,7 +384,7 @@ var bio_niq_color_colorCheck = {
         fondo.red = valoresfondo[0];
         fondo.green = valoresfondo[1];
         fondo.blue = valoresfondo[2];
-        contrastDiff(texto, fondo, destAAg);
+        getContrastDiff(texto, fondo, destAAg);
         document.getElementById(destbri).value = getBrightnessDiff(texto, fondo);
         document.getElementById(destcol).value = getColorDiff(texto, fondo);
     },
