@@ -161,18 +161,25 @@ var bio_general_colorCheck = {
 //-----------------------------------
 //-----------------------------------
 function hexToRGB(hex) {
+    var rgbValue;
+
+    hex = shorthandHexToExtended(hex);
+
+    rgbValue = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+
+    return rgbValue ? {
+        r: parseInt(rgbValue[1], 16),
+        g: parseInt(rgbValue[2], 16),
+        b: parseInt(rgbValue[3], 16)
+    } : null;
+}
+
+function shorthandHexToExtended(shorthandHex) {
     var shorthandRegex = /^#?([a-f\d])([a-f\d])([a-f\d])$/i;
 
-    hex = hex.replace(shorthandRegex, function (m, r, g, b) {
-        return r + r + g + g + b + b;
+    return shorthandHex.replace(shorthandRegex, function (m, r, g, b) {
+        return '#' + r + r + g + g + b + b;
     });
-
-    var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-    return result ? {
-        r: parseInt(result[1], 16),
-        g: parseInt(result[2], 16),
-        b: parseInt(result[3], 16)
-    } : null;
 }
 
 function RGBToHex(RGBColor) {
@@ -223,11 +230,8 @@ function decToHex(positionInDecimalBase) {
     return baseString.charAt((positionAsNumber - positionAsNumber % 16) / 16) + baseString.charAt(positionAsNumber % 16);
 }
 
-function hexRGB(originId, destId) {
-    var color = document.getElementById(originId).value,
-        rgb = hexToRGB(color);
-
-    document.getElementById(destId).value = 'rgb(' + rgb.r + ',' + rgb.g + ',' + rgb.b + ')';
+function hexRGBString(rgbObject) {
+    return 'rgb(' + rgbObject.r + ',' + rgbObject.g + ',' + rgbObject.b + ')';
 }
 
 function RGBhex(originId, destId) {
@@ -240,8 +244,8 @@ function RGBhex(originId, destId) {
 // WCAG 2.0 color test
 function contrastDiff(foreground, background) {
     var higherValue, lowerValue, contrastDiff,
-        foregroundLuminosity = bio_niq_color_colorCheck.obtenluminosidad(foreground.red, foreground.green, foreground.blue, 255),
-        backgroundLuminosity = bio_niq_color_colorCheck.obtenluminosidad(background.red, background.green, background.blue, 255);
+        foregroundLuminosity = bio_niq_color_colorCheck.obtenluminosidad(foreground.r, foreground.g, foreground.b, 255),
+        backgroundLuminosity = bio_niq_color_colorCheck.obtenluminosidad(background.r, background.g, background.b, 255);
 
     if (foregroundLuminosity > backgroundLuminosity) {
         higherValue = foregroundLuminosity;
@@ -255,6 +259,7 @@ function contrastDiff(foreground, background) {
 
     return contrastDiff;
 
+    // Large text is defined as 14 point (typically 18.66px) and bold or larger, or 18 point (typically 24px) or larger.
     // evaluation according to the different thresholds
     // if (contrastDiff) {
     //     if (contrastDiff < 3) {
@@ -276,7 +281,7 @@ function contrastDiff(foreground, background) {
 
 // WCAG 1.0 color test
 function getBrightness(rgbColorParams) {
-    var brightness = ((rgbColorParams.red * 299) + (rgbColorParams.green * 587) + (rgbColorParams.blue * 114)) / 1000;
+    var brightness = ((rgbColorParams.r * 299) + (rgbColorParams.g * 587) + (rgbColorParams.b * 114)) / 1000;
 
     return brightness;
 }
@@ -291,7 +296,7 @@ function getBrightnessDiff(foreground, background) {
 }
 
 function getColorDiff(foreground, background) {
-    return Math.abs(background.red - foreground.red) + Math.abs(background.green - foreground.green) + Math.abs(background.blue - foreground.blue);
+    return Math.abs(background.r - foreground.r) + Math.abs(background.g - foreground.g) + Math.abs(background.b - foreground.b);
     // limit: 500
 }
 
@@ -2132,7 +2137,7 @@ var bio_niq_color_colorCheck = {
     },
     colorPicker: function (cl, dest) {
         document.getElementById(dest).value = cl;
-        hexRGB(dest, 'rgb_' + dest);
+        hexRGBString(dest, 'rgb_' + dest);
         bio_niq_color_colorCheck.aplicaColor();
     },
     canvasW: null,

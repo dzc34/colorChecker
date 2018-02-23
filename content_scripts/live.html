@@ -2,26 +2,91 @@
 <head></head>
 
 <body>
-<label> Hex
-<input onblur="updateSecond(this.value)" id="hex" />
-</label>
-<label>RGB<input onblur="updateFirst(this.value)" id="RGB" /></label>
-<label>R<input id="R" /></label>
-<label>G<input id="G" /></label>
-<label>B<input id="B" /></label>
+<fieldset>
+    <legend>Color evaluation</legend>
+    <label for="foreground">Foreground (hex)<input id="foreground"/></label><input type="color" id="foreInput"
+                                                                                   onchange="setColor(this.value, 'foreground')"/><br/>
+    <label for="background">Background (hex)<input id="background"/></label><input type="color" id="backInput"
+                                                                                   onchange="setColor(this.value, 'background')"/><br/>
+    <button onclick="evaluateColors()">Evaluate</button>
+    <table>
+        <caption>Results</caption>
+        <thead>
+        <tr>
+            <th>Color mode</th>
+            <th>Foreground</th>
+            <th>Backgroud</th>
+            <th>Contrast</th>
+            <th>Brightness</th>
+            <th>Color diff</th>
+        </tr>
+        </thead>
+        <tbdy>
+            <tr>
+                <th>hex</th>
+                <td id="foreHex"></td>
+                <td id="backHex"></td>
+                <td class="contrast"></td>
+                <td class="brightness"></td>
+                <td class="colorDiff"></td>
+            </tr>
+            <tr>
+                <th>rgb</th>
+                <td id="foreRGB"></td>
+                <td id="backRGB"></td>
+                <td class="contrast"></td>
+                <td class="brightness"></td>
+                <td class="colorDiff"></td>
+            </tr>
+        </tbdy>
+    </table>
+</fieldset>
+<!--<h2>Explanation</h2>-->
+<!--<p>Enter a foreground and background color in RGB hexadecimal format (e.g., #FD3 or #F7DA39) or choose a color using the-->
+    <!--color picker. The Lightness slider can be used to adjust the selected color.</p>-->
+<!--<p><a href="//www.w3.org/TR/WCAG20/">WCAG 2.0</a> level AA requires a contrast ratio of at least 4.5:1 for normal text-->
+    <!--and 3:1 for large text. Level AAA requires a contrast ratio of at least 7:1 for normal text and 4.5:1 for large-->
+    <!--text.</p>-->
+<!--<p>Large text is defined as 14 point (typically 18.66px) and bold or larger, or 18 point (typically 24px) or larger.</p>-->
 <script src="wcagContrastChecker.js"></script>
 <script>
-	function updateSecond(color){
-	    var rgb = hexToRGB(color);
+    function setColor(color, id) {
+        document.getElementById(id).value = color;
+        evaluateColors();
+    }
 
-	    document.getElementById('R').value = rgb.r ;
-	    document.getElementById('G').value = rgb.g;
-	    document.getElementById('B').value = rgb.b;
-	    document.getElementById('RGB').value = 'rgb(' + rgb.r + ',' + rgb.g + ',' + rgb.b + ')';
-	}
-	function updateFirst(color){
-	    document.getElementById('hex').value = RGBToHex(color);
-	}
+    function evaluateColors() {
+        var foregroundColor = document.getElementById('foreground').value,
+            backgroundColor = document.getElementById('background').value,
+            foreHex = document.getElementById('foreHex'),
+            foreRGB = document.getElementById('foreRGB'),
+            backHex = document.getElementById('backHex'),
+            backRGB = document.getElementById('backRGB'),
+            foreInput = document.getElementById('foreInput'),
+            backInput = document.getElementById('backInput'),
+            contrast = document.querySelectorAll('.contrast'),
+            brightness = document.querySelectorAll('.brightness'),
+            colorDiff = document.querySelectorAll('.colorDiff'),
+            foreRGBObject = hexToRGB(foregroundColor),
+            backRGBObject = hexToRGB(backgroundColor);
+        foreInput.value = shorthandHexToExtended(foregroundColor);
+        backInput.value = shorthandHexToExtended(backgroundColor);
+
+        foreHex.innerText = foregroundColor;
+        foreRGB.innerText = 'rgb(' + foreRGBObject.r + ',' + foreRGBObject.g + ',' + foreRGBObject.b + ')';
+        backHex.innerText = backgroundColor;
+        backRGB.innerText = 'rgb(' + backRGBObject.r + ',' + backRGBObject.g + ',' + backRGBObject.b + ')';
+
+        contrast.forEach(function (element) {
+            element.innerText = contrastDiff(foreRGBObject, backRGBObject) + ':1';
+        });
+        brightness.forEach(function (element) {
+            element.innerText = getBrightnessDiff(foreRGBObject, backRGBObject);
+        });
+        colorDiff.forEach(function (element) {
+            element.innerText = getColorDiff(foreRGBObject, backRGBObject);
+        });
+    }
 </script>
 </body>
 </html>
