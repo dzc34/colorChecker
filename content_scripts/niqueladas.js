@@ -41,7 +41,7 @@ var bio_niqueladas_colorCheck = {
 		}
 
 		bio_niq_color_colorCheck.sendColor(tm,'c_texto');
-		bio_niq_color_colorCheck.sendColor(bio_niqueladas_colorCheck.parentCol(elem,documento),'c_fondo');
+		bio_niq_color_colorCheck.sendColor(bio_niqueladas_colorCheck.backgroundFromAncestorOrSelf(elem,documento),'c_fondo');
 		var etiqueta = document.getElementById('currentElement');
 		var fontsize = documento.defaultView.getComputedStyle(elem, null).getPropertyValue('font-size').replace('px','');
 		var fontweight = documento.defaultView.getComputedStyle(elem, null).getPropertyValue('font-weight');
@@ -76,7 +76,7 @@ var bio_niqueladas_colorCheck = {
 				colores[0] = bio_niq_color_colorCheck.calDefRev(tm.replace('rgb(','').replace(')',''),vision_tipo);
 			}
 
-			tm = bio_niqueladas_colorCheck.parentCol(elem,documento);
+			tm = bio_niqueladas_colorCheck.backgroundFromAncestorOrSelf(elem,documento);
 			if(tm){
 				if(tm.indexOf('rgba') > -1){
 					var valores = tm.split(',');
@@ -149,7 +149,7 @@ var bio_niqueladas_colorCheck = {
 				target.addEventListener("click", function(){this.getAttribute('onclick').replace('return false;','')}, false);
 		}
 	},
-	parentCol:function(element){
+	backgroundFromAncestorOrSelf:function(element){
 		var act = element;
 		var documento = bio_niqueladas_colorCheck.padre(element);
 		

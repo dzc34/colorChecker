@@ -185,12 +185,12 @@ function shorthandHexToExtended(shorthandHex) {
 function RGBToHex(RGBColor) {
     var RGBValues = extractRGBValues(RGBColor);
 
-    return '#' + decToHex(RGBValues[0]) + decToHex(RGBValues[1]) + decToHex(RGBValues[2]);
+    return '#' + decToHex(RGBValues.r) + decToHex(RGBValues.g) + decToHex(RGBValues.b);
 }
 
 function extractRGBValues(color) {
     var separator, rgbValues,
-        plainParameters = color.replace('rgb', '').replace('(', '').replace(')', '').replace(/ /g, '');
+        plainParameters = color.replace('rgb(', '').replace('rgba(', '').replace('(', '').replace(')', '').replace(/ /g, '');
 
     if (plainParameters.indexOf(',') > -1) {
         separator = ',';
@@ -204,7 +204,12 @@ function extractRGBValues(color) {
     rgbValues = plainParameters.split(separator);
 
 
-    return rgbValues;
+    return {
+        r: parseInt(rgbValues[0]),
+        g: parseInt(rgbValues[1]),
+        b: parseInt(rgbValues[2]),
+        o: rgbValues[3] === undefined ? 1 : parseInt(rgbValues[3])
+    }
 }
 
 function decToHex(positionInDecimalBase) {
@@ -236,9 +241,9 @@ function hexRGBString(rgbObject) {
 
 function RGBhex(originId, destId) {
     var originalValue = document.getElementById(originId).value,
-        values = extractRGBValues(originalValue);
+        RGBValues = extractRGBValues(originalValue);
 
-    document.getElementById(destId).value = '#' + decToHex(values[0]) + decToHex(values[1]) + decToHex(values[2]);
+    document.getElementById(destId).value = '#' + decToHex(RGBValues.r) + decToHex(RGBValues.g) + decToHex(RGBValues.b);
 }
 
 // WCAG 2.0 color test
@@ -258,25 +263,6 @@ function getContrastDiff(foreground, background) {
     contrastDiff = Math.round(contrastDiff * 100) / 100; // round to two decimals
 
     return contrastDiff;
-
-    // Large text is defined as 14 point (typically 18.66px) and bold or larger, or 18 point (typically 24px) or larger.
-    // evaluation according to the different thresholds
-    // if (getContrastDiff) {
-    //     if (getContrastDiff < 3) {
-    //         return 'error';
-    //     }
-    //     else if (getContrastDiff < 4.5) {
-    //         return 'ok';
-    //     }
-    //     else if (getContrastDiff < 7) {
-    //         return 'ok';
-    //     }
-    //     else if (getContrastDiff >= 7) {
-    //         return 'ok';
-    //     }
-    // } else {
-    //         return '-';
-    // }
 }
 
 // WCAG 1.0 color test
@@ -300,6 +286,170 @@ function getColorDiff(foreground, background) {
     // limit: 500
 }
 
+//-----------------------------------
+//-----------------------------------
+// todo: consider opacity
+function checkColorFromElement(element) {
+    var foregroundColor, backgroundColor, fontSize, fontWeight, isBold, textType, contrast,isValidAA, isValidAAA,
+        getComputedStyle = document.defaultView.getComputedStyle(element, null),
+        largeSize = 24,
+        normalSize = 18.6667;
+
+//The visual presentation of text and images of text has a contrast ratio of at least 4.5:1, except for the following: (Level AA)
+    //Large Text: Large-scale text and images of large-scale text have a contrast ratio of at least 3:1;
+
+
+    if (getComputedStyle.getPropertyValue('display') === 'none') {
+        return false;
+    }
+
+    fontSize = parseInt(getComputedStyle.getPropertyValue('font-size').replace('px', ''));
+    fontWeight = getComputedStyle.getPropertyValue('font-weight');
+    isBold = parseInt(fontWeight) >= 700 || fontWeight === 'bold' || fontWeight == 'bolder';
+
+    textType = (fontSize >= largeSize || (fontSize >= normalSize && isBold)) ? 'large' : 'normal';
+
+    foregroundColor = extractRGBValues(getComputedStyle.getPropertyValue('color'));
+    backgroundColor = backgroundFromAncestorOrSelf(element);
+
+    contrast = getContrastDiff(foregroundColor, backgroundColor);
+
+    if (textType === 'normal') {
+        isValidAA= contrast >= 4.5;
+        isValidAAA= contrast >= 7;
+    } else {
+        isValidAA= contrast >= 3;
+        isValidAAA= contrast >= 4.5;
+    }
+
+
+    return {
+        element: element,
+        contrast: contrast,
+        fontSize: fontSize,
+        fontWeight: fontWeight,
+        textType: textType,
+        isValidAA: isValidAA,
+        isValidAAA: isValidAAA
+    };
+}
+
+//-----------------------------------
+//-----------------------------------
+function backgroundFromAncestorOrSelf(element) {
+    var defaultView = document.defaultView,
+        getComputedStyle = defaultView.getComputedStyle(element, null),
+        backgroundColor = getComputedStyle.getPropertyValue('background-color'),
+        RGBValues = extractRGBValues(backgroundColor),
+        isTransparent = RGBValues.o === 0;
+
+    if (isTransparent || backgroundColor === 'transparent' || !backgroundColor) {
+        if (element.parentNode.tagName.toLowerCase() !== 'body') {
+            return backgroundFromAncestorOrSelf(element.parentNode);
+        } else {
+            return 'rgb(255,255,255)';
+        }
+    }
+
+    return extractRGBValues(backgroundColor);
+}
+
+//-----------------------------------
+//-----------------------------------
+
+function checkAllElementsInDocument() {
+    var elementsToCheck,
+        query = 'body *',
+        elementsToExclude = [
+            'script', 'hr', 'table', 'tbody', 'thead', 'tfoot', 'tr', 'iframe',
+            'option', 'ul', 'ol', 'dl', 'fieldset', 'style', 'link', 'iframe', 'object'
+        ];
+
+    elementsToExclude.forEach(function (element) {
+        query += ':not(' + element + ')';
+    });
+    query += ':not(tr)';
+
+    elementsToCheck = document.querySelectorAll(query);
+
+    elementsToCheck.forEach(function (element) {
+        if (getText(element) || (getValue(element) && element.getAttribute('type') !== 'hidden')) {
+            //console.log(checkColorFromElement(element));
+        }
+    });
+
+    /*
+        for (var i = 0; i < elementos.length; i++) {
+            var elemento = elementos[i].tagName.toLowerCase();
+            if ((getText(elementos[i]) || elemento == 'textarea' || (elemento == 'input' && elementos[i].getAttribute('type') && elementos[i].getAttribute('type') != 'hidden')) && elemento != 'script' && elemento != 'noscript') {
+                var colores = checkColorFromElement(elementos[i], document.getElementById('vision_tipo').selectedIndex, false);
+                if (colores) {
+
+                    var fontsize = documentos[doc_number].defaultView.getComputedStyle(elementos[i], null).getPropertyValue('font-size').replace('px', '');
+
+                    var fontweight = documentos[doc_number].defaultView.getComputedStyle(elementos[i], null).getPropertyValue('font-weight');
+                    var tam = 'small';
+                    if (fontsize >= config.fntLg || (fontsize >= config.fntSm && (fontweight == 'bold' || fontweight == 'bolder')))
+                        tam = 'large';
+                    var lum = contrastDiffElements(colores[0], colores[1]);
+                    var texto = {};
+                    texto.red = colores[0].split(',')[0];
+                    texto.green = colores[0].split(',')[1];
+                    texto.blue = colores[0].split(',')[2];
+
+                    var brilloPrimerPlano = getBrightness(texto);
+
+                    var fondo = {};
+                    fondo.red = colores[1].split(',')[0];
+                    fondo.green = colores[1].split(',')[1];
+                    fondo.blue = colores[1].split(',')[2];
+                    var brilloSegundoPlano = getBrightness(fondo);
+
+                    var diferenciaBrillo = parseInt(Math.abs(brilloSegundoPlano - brilloPrimerPlano), 10);
+                    var diferenciaColor = Math.abs(fondo.red - texto.red) + Math.abs(fondo.green - texto.green) + Math.abs(fondo.blue - texto.blue);
+
+                    var identificador = lum + '-' + tam;
+                    var identificadorWCAG1 = lum + '-';
+
+                    if (!bio_niqueladas_colorCheck.luminosidades[identificadorWCAG1]) {
+                        bio_niqueladas_colorCheck.luminosidades[identificadorWCAG1] = new Array;
+                        bio_niqueladas_colorCheck.luminosidades[identificadorWCAG1][elemento] = new Array;
+                        bio_niqueladas_colorCheck.luminosidades[identificadorWCAG1][elemento].push(elementos[i]);
+                        if (lumOrder.indexOf(lum) == -1) {
+                            lumOrder.push(lum);
+                        }
+                        difBrillo[identificadorWCAG1] = diferenciaBrillo;
+                        difColor[identificadorWCAG1] = diferenciaColor;
+                        bio_niqueladas_colorCheck.combinacionColores[identificadorWCAG1] = colores;
+                    } else {
+                        if (!bio_niqueladas_colorCheck.luminosidades[identificadorWCAG1][elemento])
+                            bio_niqueladas_colorCheck.luminosidades[identificadorWCAG1][elemento] = new Array;
+                        bio_niqueladas_colorCheck.luminosidades[identificadorWCAG1][elemento].push(elementos[i]);
+                    }
+
+                    if (!bio_niqueladas_colorCheck.luminosidades[identificador]) {
+                        bio_niqueladas_colorCheck.luminosidades[identificador] = new Array;
+                        bio_niqueladas_colorCheck.luminosidades[identificador][elemento] = new Array;
+                        bio_niqueladas_colorCheck.luminosidades[identificador][elemento].push(elementos[i]);
+                        if (lumOrder.indexOf(lum) == -1) {
+                            lumOrder.push(lum);
+                        }
+                        difBrillo[identificador] = diferenciaBrillo;
+                        difColor[identificador] = diferenciaColor;
+                        bio_niqueladas_colorCheck.combinacionColores[identificador] = colores;
+                    } else {
+                        if (!bio_niqueladas_colorCheck.luminosidades[identificador][elemento])
+                            bio_niqueladas_colorCheck.luminosidades[identificador][elemento] = new Array;
+                        bio_niqueladas_colorCheck.luminosidades[identificador][elemento].push(elementos[i]);
+                    }
+                }
+            }
+        }
+        */
+}
+
+//-----------------------------------
+//-----------------------------------
 
 var bio_niq_color_colorCheck = {
     colorpickerDest: 'c_texto',
@@ -2202,8 +2352,7 @@ var bio_niq_color_colorCheck = {
         canvas.removeEventListener("mousemove", bio_niq_color_colorCheck.getColorFromCanvas, false);
     }
 }
-//-----------------------------------
-//-----------------------------------
+
 //const STATE_START = Components.interfaces.nsIWebProgressListener.STATE_START;
 //const STATE_STOP = Components.interfaces.nsIWebProgressListener.STATE_STOP;
 var tabListenerNiq = {
@@ -2276,7 +2425,7 @@ var bio_niqueladas_colorCheck = {
         }
 
         bio_niq_color_colorCheck.sendColor(tm, 'c_texto');
-        bio_niq_color_colorCheck.sendColor(bio_niqueladas_colorCheck.parentCol(elem, documento), 'c_fondo');
+        bio_niq_color_colorCheck.sendColor(backgroundFromAncestorOrSelf(elem, documento), 'c_fondo');
         var etiqueta = document.getElementById('currentElement');
         var fontsize = documento.defaultView.getComputedStyle(elem, null).getPropertyValue('font-size').replace('px', '');
         var fontweight = documento.defaultView.getComputedStyle(elem, null).getPropertyValue('font-weight');
@@ -2284,53 +2433,6 @@ var bio_niqueladas_colorCheck = {
         var tam = 'small';
         if (fontsize >= config.fntLg || (fontsize >= config.fntSm && (fontweight == 'bold' || fontweight == 'bolder')))
             tam = 'large';
-
-    },
-    colorElement: function (elem, tipo, discr) {
-        var colores = [];
-        var documento = bio_niqueladas_colorCheck.padre(elem);
-        if (tipo <= 0 || discr) {
-            var vision_tipo = 'Normal';
-        } else {
-            var vision_tipo = document.getElementById('vision_tipo').value;
-        }
-        try {
-            var tm = documento.defaultView.getComputedStyle(elem, null).getPropertyValue('color');
-
-            if (tm.indexOf('rgba') > -1) {
-                var valores = tm.split(',');
-                tm = valores[0].replace('rgba', 'rgb') + ',' + valores[1] + ',' + valores[2] + ')';
-            }
-
-            if (tm.replace('rgb(', '').replace(')', '') == 'transparent')
-                return false;
-
-            if (tipo <= 0 || discr) {
-                colores[0] = tm.replace('rgb(', '').replace(')', '');
-            } else {
-                colores[0] = bio_niq_color_colorCheck.calDefRev(tm.replace('rgb(', '').replace(')', ''), vision_tipo);
-            }
-
-            tm = bio_niqueladas_colorCheck.parentCol(elem, documento);
-            if (tm) {
-                if (tm.indexOf('rgba') > -1) {
-                    var valores = tm.split(',');
-                    tm = valores[0].replace('rgba', 'rgb') + ',' + valores[1] + ',' + valores[2] + ')';
-                }
-                if (tipo <= 0 || discr)
-                    colores[1] = tm.replace('rgb(', '').replace(')', '');
-                else
-                    colores[1] = bio_niq_color_colorCheck.calDefRev(tm.replace('rgb(', '').replace(')', ''), vision_tipo);
-                if (documento.defaultView.getComputedStyle(elem, null).getPropertyValue('display') == 'none')
-                    return false;
-            } else {
-                return false;
-            }
-        } catch (e) {
-            return false;
-        }
-
-        return colores;
 
     },
     borde: '',
@@ -2391,29 +2493,6 @@ var bio_niqueladas_colorCheck = {
                     this.getAttribute('onclick').replace('return false;', '')
                 }, false);
         }
-    },
-    parentCol: function (element) {
-        var act = element;
-        var documento = bio_niqueladas_colorCheck.padre(element);
-
-        if (documento.defaultView.getComputedStyle(act, null).getPropertyValue('display') == 'none')
-            return false;
-
-        var col = documento.defaultView.getComputedStyle(act, null).getPropertyValue('background-color');
-        while (col == 'transparent') {
-            if (act.tagName.toLowerCase() == 'body' || act.tagName.toLowerCase() == 'html') {
-                col = 'rgb(255,255,255)';
-                break;
-            }
-            act = act.parentNode;
-            col = documento.defaultView.getComputedStyle(act, null).getPropertyValue('background-color');
-        }
-        if (col.indexOf('rgba') > -1) {
-            var valores = col.split(',');
-            col = valores[0].replace('rgba', 'rgb') + ',' + valores[1] + ',' + valores[2] + ')';
-        }
-
-        return col;
     },
     ratonClick: function (ch) {
     },
@@ -2508,7 +2587,7 @@ var bio_niqueladas_colorCheck = {
                     for (var i = 0; i < elementos.length; i++) {
                         var elemento = elementos[i].tagName.toLowerCase();
                         if ((getText(elementos[i]) || elemento == 'textarea' || (elemento == 'input' && elementos[i].getAttribute('type') && elementos[i].getAttribute('type') != 'hidden')) && elemento != 'script' && elemento != 'noscript') {
-                            var colores = bio_niqueladas_colorCheck.colorElement(elementos[i], document.getElementById('vision_tipo').selectedIndex, false);
+                            var colores = checkColorFromElement(elementos[i], document.getElementById('vision_tipo').selectedIndex, false);
                             if (colores) {
 
                                 var fontsize = documentos[doc_number].defaultView.getComputedStyle(elementos[i], null).getPropertyValue('font-size').replace('px', '');
@@ -2886,7 +2965,7 @@ var bio_niqueladas_colorCheck = {
                     el.setAttribute('class', 'bioContrast');
                 bio_niqueladas_colorCheck.luminosidades[luminosidad][elementos[a]][i].style.border = '2px dotted red';
                 if (vision_tipo > 0 && i == 0) {
-                    var ct = bio_niqueladas_colorCheck.colorElement(bio_niqueladas_colorCheck.luminosidades[luminosidad][elementos[a]][i], document.getElementById('vision_tipo').selectedIndex, true);
+                    var ct = checkColorFromElement(bio_niqueladas_colorCheck.luminosidades[luminosidad][elementos[a]][i], document.getElementById('vision_tipo').selectedIndex, true);
                     document.getElementById('texto_ejemplo').style.color = 'rgb(' + ct[0] + ')';
                     document.getElementById('texto_ejemplo').style.backgroundColor = 'rgb(' + ct[1] + ')';
                 }
@@ -3172,11 +3251,14 @@ var colorcheckerSidebar = {
     },
     onLinkIconAvailable: function () {
         return 0;
-    },
+    }
 }
 //-----------------------------------
 //-----------------------------------
 
+function getValue(input) {
+    return input.value;
+}
 
 function getText(element) {
     // TODO: add aria attribute values when needed
@@ -3204,7 +3286,7 @@ function getText(element) {
     function isElementWithAltText(element) {
         var tagName = element.tagName.toLowerCase();
 
-        return (tagName === 'img' && element.getAttribute('src').indexOf('moz-extension://') != 0) || tagName === 'area' || (tagName === 'input' && element.getAttribute('type').toLowerCase() === 'image');
+        return tagName === 'img' || tagName === 'area' || (tagName === 'input' && element.getAttribute('type') && element.getAttribute('type').toLowerCase() === 'image');
     }
 
     function isTextNode(node) {

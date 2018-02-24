@@ -13,10 +13,10 @@
 <body>
 <fieldset>
     <legend>Color evaluation</legend>
-    <label for="foreground">Foreground (hex)<input id="foreground" onchange="setColor(this.value, 'foreInput')" value="#000000"/></label>
-    <input type="color" id="foreInput" onchange="setColor(this.value, 'foreground')" value="#000000"/><br/>
-    <label for="background">Background (hex)<input id="background" onchange="setColor(this.value, 'backInput')" value="#FFFFFF"/></label>
-    <input type="color" id="backInput" onchange="setColor(this.value, 'background')" value="#FFFFFF"/><br/>
+    <label for="foreground">Foreground (hex)<input id="foreground" onchange="setColor(this.value, 'foreInput')" value="#0000FF"/></label>
+    <input type="color" id="foreInput" onchange="setColor(this.value, 'foreground')" value="#0000FF"/><br/>
+    <label for="background">Background (hex)<input id="background" onchange="setColor(this.value, 'backInput')" value="#BFBFBF"/></label>
+    <input type="color" id="backInput" onchange="setColor(this.value, 'background')" value="#BFBFBF"/><br/>
     <button onclick="evaluateColors()">Evaluate</button>
     <table>
         <caption>Results</caption>
@@ -52,27 +52,27 @@
     <table>
         <thead>
         <tr>
-            <th>level</th>
+            <th>Size</th>
             <th>Contrast ratio</th>
-            <th>small</th>
-            <th>large</th>
+            <th>AA</th>
+            <th>AAA</th>
             <th>example</th>
         </tr>
         </thead>
         <tbody>
         <tr>
-            <td>AA</td>
+            <td>Normal</td>
             <td class="contrast"></td>
-            <td id="smallAA"></td>
-            <td id="largeAA"></td>
-            <td class="sampleText" style="font-size: 14pt">Lorem ipsum</td>
+            <td id="normalAA"></td>
+            <td id="normalAAA"></td>
+            <td class="sampleText normal" style="font-size: 14pt" onclick="getColors(event.target)">Lorem ipsum</td>
         </tr>
         <tr>
-            <td>AAA</td>
+            <td>Large</td>
             <td class="contrast"></td>
-            <td id="smallAAA"></td>
+            <td id="largeAA"></td>
             <td id="largeAAA"></td>
-            <td class="sampleText" style="font-size: 18pt">Lorem ipsum</td>
+            <td class="sampleText large" style="font-size: 18pt" onclick="getColors(event.target)">Lorem ipsum</td>
         </tr>
         </tbody>
     </table>
@@ -80,6 +80,11 @@
 <script src="wcagContrastChecker.js"></script>
 <script>
     evaluateColors();
+    checkAllElementsInDocument();
+
+    function getColors(element){
+        console.log(checkColorFromElement(element));
+    }
 
     function setColor(color, id) {
         document.getElementById(id).value = color;
@@ -103,10 +108,7 @@
             contrastDiff = getContrastDiff(foreRGBObject, backRGBObject),
             brightnessDiff = getBrightnessDiff(foreRGBObject, backRGBObject),
             colorDiff = getColorDiff(foreRGBObject, backRGBObject),
-            isValidNormalAA = contrastDiff >= 4.5,
-            isValidNormalAAA = contrastDiff >= 3,
-            isValidLargeAA = contrastDiff >= 7,
-            isValidLargeAAA = contrastDiff >= 4.5;
+            validationNormal, validationLarge;
 
         foreInput.value = shorthandHexToExtended(foregroundColor);
         backInput.value = shorthandHexToExtended(backgroundColor);
@@ -126,18 +128,22 @@
             element.innerText = colorDiff;
         });
         examples.forEach(function (element) {
-            element.style.backgroundColor = backgroundColor;
             element.style.color = foregroundColor;
+            element.style.backgroundColor = backgroundColor;
         });
 
-        document.getElementById('smallAA').className = isValidNormalAA ? 'valid' : 'fail';
-        document.getElementById('smallAA').innerText = isValidNormalAA ? 'Pass' : 'Fail';
-        document.getElementById('smallAAA').className = isValidNormalAAA ? 'valid' : 'fail';
-        document.getElementById('smallAAA').innerText = isValidNormalAAA ? 'Pass' : 'Fail';
-        document.getElementById('largeAA').className = isValidLargeAA ? 'valid' : 'fail';
-        document.getElementById('largeAA').innerText = isValidLargeAA ? 'Pass' : 'Fail';
-        document.getElementById('largeAAA').className = isValidLargeAAA ? 'valid' : 'fail';
-        document.getElementById('largeAAA').innerText = isValidLargeAAA ? 'Pass' : 'Fail';
+        validationNormal = checkColorFromElement(document.querySelectorAll('.normal')[0]);
+        validationLarge = checkColorFromElement(document.querySelectorAll('.large')[0]);
+
+
+        document.getElementById('normalAA').className = validationNormal.isValidAA ? 'valid' : 'fail';
+        document.getElementById('normalAA').innerText = validationNormal.isValidAA ? 'Pass' : 'Fail';
+        document.getElementById('normalAAA').className = validationNormal.isValidAAA ? 'valid' : 'fail';
+        document.getElementById('normalAAA').innerText = validationNormal.isValidAAA ? 'Pass' : 'Fail';
+        document.getElementById('largeAA').className = validationLarge.isValidAA ? 'valid' : 'fail';
+        document.getElementById('largeAA').innerText =  validationLarge.isValidAA ? 'Pass' : 'Fail';
+        document.getElementById('largeAAA').className =  validationLarge.isValidAAA ? 'valid' : 'fail';
+        document.getElementById('largeAAA').innerText =  validationLarge.isValidAAA ? 'Pass' : 'Fail';
     }
 </script>
 </body>
