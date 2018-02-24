@@ -4,6 +4,7 @@
         .valid {
             color: #009900;
         }
+
         .fail {
             color: #990000;
         }
@@ -13,9 +14,11 @@
 <body>
 <fieldset>
     <legend>Color evaluation</legend>
-    <label for="foreground">Foreground (hex)<input id="foreground" onchange="setColor(this.value, 'foreInput')" value="#0000FF"/></label>
+    <label for="foreground">Foreground (hex)<input id="foreground" onchange="setColor(this.value, 'foreInput')"
+                                                   value="#0000FF"/></label>
     <input type="color" id="foreInput" onchange="setColor(this.value, 'foreground')" value="#0000FF"/><br/>
-    <label for="background">Background (hex)<input id="background" onchange="setColor(this.value, 'backInput')" value="#BFBFBF"/></label>
+    <label for="background">Background (hex)<input id="background" onchange="setColor(this.value, 'backInput')"
+                                                   value="#BFBFBF"/></label>
     <input type="color" id="backInput" onchange="setColor(this.value, 'background')" value="#BFBFBF"/><br/>
     <button onclick="evaluateColors()">Evaluate</button>
     <table>
@@ -77,17 +80,77 @@
         </tbody>
     </table>
 </fieldset>
+<ul id="results"></ul>
 <script src="wcagContrastChecker.js"></script>
 <script>
     evaluateColors();
-    checkAllElementsInDocument();
+    evaluateAllElements();
 
-    function getColors(element){
-        console.log(checkColorFromElement(element));
+    function evaluateAllElements() {
+        var result, tags, elements, item, itemContent, resultStrings, label, fontSize,
+            results = checkAllElementsInDocument(),
+            resultsList = document.getElementById('results');
+
+        for (identifier in results) {
+            resultStrings = identifier.split('-');
+            label = resultStrings[0];
+            fontSize = resultStrings[1];
+            result = results[identifier];
+            tags = result.tags;
+            elements = result.elements;
+
+            item = document.createElement('li');
+            itemContent = label + ' - ' + fontSize + ' (' + elements.length + ' elements [' + tags.join(', ') + '])';
+            item = createElement('li', itemContent, {tabindex: 0});
+
+            item.addEventListener('focus', highlight(elements));
+            item.addEventListener('blur', removeHighlight(elements));
+            resultsList.appendChild(item);
+        }
+
+        function highlight(elements) {
+            return function () {
+                elements.forEach(function (element) {
+                    element.style.outline = '1px solid red';
+                });
+            }
+        }
+
+        function removeHighlight(elements) {
+            return function () {
+                elements.forEach(function (element) {
+                    element.style.outline = '';
+                });
+            }
+        }
+
+    }
+
+    function createElement(tagName, content, parameters) {
+        var newElement = document.createElement(tagName),
+            textContent;
+
+        if (parameters) {
+            for (var parameterName in parameters) {
+                newElement.setAttribute(parameterName, parameters[parameterName]);
+            }
+        }
+
+        if (content.length) {
+            textContent = document.createTextNode(content);
+            newElement.appendChild(textContent);
+        }
+
+        return newElement
+    }
+
+    function getColors(element) {
+        console.log(evaluateColorFromElement(element));
     }
 
     function setColor(color, id) {
         document.getElementById(id).value = color;
+        evaluateColors();
     }
 
     function evaluateColors() {
@@ -132,8 +195,8 @@
             element.style.backgroundColor = backgroundColor;
         });
 
-        validationNormal = checkColorFromElement(document.querySelectorAll('.normal')[0]);
-        validationLarge = checkColorFromElement(document.querySelectorAll('.large')[0]);
+        validationNormal = evaluateColorFromElement(document.querySelectorAll('.normal')[0]);
+        validationLarge = evaluateColorFromElement(document.querySelectorAll('.large')[0]);
 
 
         document.getElementById('normalAA').className = validationNormal.isValidAA ? 'valid' : 'fail';
@@ -141,9 +204,9 @@
         document.getElementById('normalAAA').className = validationNormal.isValidAAA ? 'valid' : 'fail';
         document.getElementById('normalAAA').innerText = validationNormal.isValidAAA ? 'Pass' : 'Fail';
         document.getElementById('largeAA').className = validationLarge.isValidAA ? 'valid' : 'fail';
-        document.getElementById('largeAA').innerText =  validationLarge.isValidAA ? 'Pass' : 'Fail';
-        document.getElementById('largeAAA').className =  validationLarge.isValidAAA ? 'valid' : 'fail';
-        document.getElementById('largeAAA').innerText =  validationLarge.isValidAAA ? 'Pass' : 'Fail';
+        document.getElementById('largeAA').innerText = validationLarge.isValidAA ? 'Pass' : 'Fail';
+        document.getElementById('largeAAA').className = validationLarge.isValidAAA ? 'valid' : 'fail';
+        document.getElementById('largeAAA').innerText = validationLarge.isValidAAA ? 'Pass' : 'Fail';
     }
 </script>
 </body>

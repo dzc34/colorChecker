@@ -288,16 +288,11 @@ function getColorDiff(foreground, background) {
 
 //-----------------------------------
 //-----------------------------------
-// todo: consider opacity
-function checkColorFromElement(element) {
+function evaluateColorFromElement(element) {
     var foregroundColor, backgroundColor, fontSize, fontWeight, isBold, textType, contrast,isValidAA, isValidAAA,
         getComputedStyle = document.defaultView.getComputedStyle(element, null),
         largeSize = 24,
         normalSize = 18.6667;
-
-//The visual presentation of text and images of text has a contrast ratio of at least 4.5:1, except for the following: (Level AA)
-    //Large Text: Large-scale text and images of large-scale text have a contrast ratio of at least 3:1;
-
 
     if (getComputedStyle.getPropertyValue('display') === 'none') {
         return false;
@@ -321,8 +316,7 @@ function checkColorFromElement(element) {
         isValidAA= contrast >= 3;
         isValidAAA= contrast >= 4.5;
     }
-
-
+    
     return {
         element: element,
         contrast: contrast,
@@ -331,7 +325,7 @@ function checkColorFromElement(element) {
         textType: textType,
         isValidAA: isValidAA,
         isValidAAA: isValidAAA
-    };
+    }
 }
 
 //-----------------------------------
@@ -347,7 +341,7 @@ function backgroundFromAncestorOrSelf(element) {
         if (element.parentNode.tagName.toLowerCase() !== 'body') {
             return backgroundFromAncestorOrSelf(element.parentNode);
         } else {
-            return 'rgb(255,255,255)';
+            return {r: 255, g: 255, b: 255};
         }
     }
 
@@ -358,7 +352,8 @@ function backgroundFromAncestorOrSelf(element) {
 //-----------------------------------
 
 function checkAllElementsInDocument() {
-    var elementsToCheck,
+    var elementsToCheck, identifier, tagName,
+        results = {},
         query = 'body *',
         elementsToExclude = [
             'script', 'hr', 'table', 'tbody', 'thead', 'tfoot', 'tr', 'iframe',
@@ -373,16 +368,42 @@ function checkAllElementsInDocument() {
     elementsToCheck = document.querySelectorAll(query);
 
     elementsToCheck.forEach(function (element) {
-        if (getText(element) || (getValue(element) && element.getAttribute('type') !== 'hidden')) {
-            //console.log(checkColorFromElement(element));
+        var colorEvaluation;
+        
+        if (getText(element) || (getValue(element) && element.getAttribute('type') !== 'hidden' && element.getAttribute('type') !== 'color')) {
+            colorEvaluation = evaluateColorFromElement(element);
+            tagName = element.tagName.toLowerCase();
+            identifier = colorEvaluation.contrast + '-' + colorEvaluation.textType;
+
+            if(!results[identifier]){
+                results[identifier] = {
+                    elements: [],
+                    tags: []
+                };
+            }
+            results[identifier].elements.push(element);
+            if(results[identifier].tags.indexOf(tagName) === -1) {
+                results[identifier].tags.push(tagName);
+            }
         }
     });
 
+    return results;
+
     /*
+    {
+        element: element,
+        contrast: contrast,
+        fontSize: fontSize,
+        fontWeight: fontWeight,
+        textType: textType,
+        isValidAA: isValidAA,
+        isValidAAA: isValidAAA
+    }
         for (var i = 0; i < elementos.length; i++) {
             var elemento = elementos[i].tagName.toLowerCase();
             if ((getText(elementos[i]) || elemento == 'textarea' || (elemento == 'input' && elementos[i].getAttribute('type') && elementos[i].getAttribute('type') != 'hidden')) && elemento != 'script' && elemento != 'noscript') {
-                var colores = checkColorFromElement(elementos[i], document.getElementById('vision_tipo').selectedIndex, false);
+                var colores = evaluateColorFromElement(elementos[i], document.getElementById('vision_tipo').selectedIndex, false);
                 if (colores) {
 
                     var fontsize = documentos[doc_number].defaultView.getComputedStyle(elementos[i], null).getPropertyValue('font-size').replace('px', '');
@@ -2587,7 +2608,7 @@ var bio_niqueladas_colorCheck = {
                     for (var i = 0; i < elementos.length; i++) {
                         var elemento = elementos[i].tagName.toLowerCase();
                         if ((getText(elementos[i]) || elemento == 'textarea' || (elemento == 'input' && elementos[i].getAttribute('type') && elementos[i].getAttribute('type') != 'hidden')) && elemento != 'script' && elemento != 'noscript') {
-                            var colores = checkColorFromElement(elementos[i], document.getElementById('vision_tipo').selectedIndex, false);
+                            var colores = evaluateColorFromElement(elementos[i], document.getElementById('vision_tipo').selectedIndex, false);
                             if (colores) {
 
                                 var fontsize = documentos[doc_number].defaultView.getComputedStyle(elementos[i], null).getPropertyValue('font-size').replace('px', '');
@@ -2965,7 +2986,7 @@ var bio_niqueladas_colorCheck = {
                     el.setAttribute('class', 'bioContrast');
                 bio_niqueladas_colorCheck.luminosidades[luminosidad][elementos[a]][i].style.border = '2px dotted red';
                 if (vision_tipo > 0 && i == 0) {
-                    var ct = checkColorFromElement(bio_niqueladas_colorCheck.luminosidades[luminosidad][elementos[a]][i], document.getElementById('vision_tipo').selectedIndex, true);
+                    var ct = evaluateColorFromElement(bio_niqueladas_colorCheck.luminosidades[luminosidad][elementos[a]][i], document.getElementById('vision_tipo').selectedIndex, true);
                     document.getElementById('texto_ejemplo').style.color = 'rgb(' + ct[0] + ')';
                     document.getElementById('texto_ejemplo').style.backgroundColor = 'rgb(' + ct[1] + ')';
                 }
