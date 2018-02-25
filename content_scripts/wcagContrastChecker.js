@@ -289,7 +289,7 @@ function getColorDiff(foreground, background) {
 //-----------------------------------
 //-----------------------------------
 function evaluateColorFromElement(element) {
-    var foregroundColor, backgroundColor, fontSize, fontWeight, isBold, textType, contrast,isValidAA, isValidAAA,
+    var foregroundColor, backgroundColor, fontSize, fontWeight, isBold, textType, contrast, isValidAA, isValidAAA,
         getComputedStyle = document.defaultView.getComputedStyle(element, null),
         largeSize = 24,
         normalSize = 18.6667;
@@ -310,13 +310,13 @@ function evaluateColorFromElement(element) {
     contrast = getContrastDiff(foregroundColor, backgroundColor);
 
     if (textType === 'normal') {
-        isValidAA= contrast >= 4.5;
-        isValidAAA= contrast >= 7;
+        isValidAA = contrast >= 4.5;
+        isValidAAA = contrast >= 7;
     } else {
-        isValidAA= contrast >= 3;
-        isValidAAA= contrast >= 4.5;
+        isValidAA = contrast >= 3;
+        isValidAAA = contrast >= 4.5;
     }
-    
+
     return {
         element: element,
         contrast: contrast,
@@ -357,7 +357,7 @@ function checkAllElementsInDocument() {
         query = 'body *',
         elementsToExclude = [
             'script', 'hr', 'table', 'tbody', 'thead', 'tfoot', 'tr', 'iframe',
-            'option', 'ul', 'ol', 'dl', 'fieldset', 'style', 'link', 'iframe', 'object'
+            'option', 'ul', 'ol', 'dl', 'style', 'link', 'iframe', 'object'
         ];
 
     elementsToExclude.forEach(function (element) {
@@ -369,22 +369,23 @@ function checkAllElementsInDocument() {
 
     elementsToCheck.forEach(function (element) {
         var colorEvaluation;
-        
-        if (getText(element) || (getValue(element) && element.getAttribute('type') !== 'hidden' && element.getAttribute('type') !== 'color')) {
+
+        if (getChildText(element).trim().length || (getValue(element) && element.getAttribute('type') !== 'hidden' && element.getAttribute('type') !== 'color')) {
             colorEvaluation = evaluateColorFromElement(element);
             tagName = element.tagName.toLowerCase();
             identifier = colorEvaluation.contrast + '-' + colorEvaluation.textType;
 
-            if(!results[identifier]){
-                results[identifier] = {
-                    elements: [],
-                    tags: []
-                };
+            if (!results[identifier]) {
+                results[identifier] = {elements: {}, validation: {}};
+                results[identifier].elements[tagName] = [];
+            } else if (!results[identifier].elements[tagName]) {
+                results[identifier].elements[tagName] = [];
             }
-            results[identifier].elements.push(element);
-            if(results[identifier].tags.indexOf(tagName) === -1) {
-                results[identifier].tags.push(tagName);
-            }
+
+            results[identifier].elements[tagName].push(element);
+
+            results[identifier].validation.isValidAA = colorEvaluation.isValidAA;
+            results[identifier].validation.isValidAAA = colorEvaluation.isValidAAA;
         }
     });
 
@@ -3281,6 +3282,39 @@ function getValue(input) {
     return input.value;
 }
 
+function getTextFromNode(element) {
+    if (isTextNode(element)) {
+        return element.nodeValue.replace("\"", "'").replace("\"", "'").replace("<", "&lt;").replace(">", "&gt;");
+    }
+
+    if (isElementWithAltText(element)) {
+        return element.getAttribute('alt') || '';
+    }
+
+    return '';
+}
+
+function getChildText(element) {
+    var childNodes,
+        text = '';
+
+    if (isTextNode(element)) {
+        return element.nodeValue.replace("\"", "'").replace("\"", "'").replace("<", "&lt;").replace(">", "&gt;");
+    }
+
+    if (isElementWithAltText(element)) {
+        return element.getAttribute('alt') || '';
+    }
+
+    childNodes = element.childNodes;
+
+    for (var i = 0, childNodesLength = childNodes.length; i < childNodesLength; i++) {
+        text += getTextFromNode(childNodes[i]);
+    }
+
+    return text.replace(/\n/g, ' ').replace(/\t/g, ' ').replace(/\s+/gi, ' ');
+}
+
 function getText(element) {
     // TODO: add aria attribute values when needed
     var childNodes,
@@ -3303,19 +3337,18 @@ function getText(element) {
     }
 
     return text.replace(/\n/g, ' ').replace(/\t/g, ' ').replace(/\s+/gi, ' ');
-
-    function isElementWithAltText(element) {
-        var tagName = element.tagName.toLowerCase();
-
-        return tagName === 'img' || tagName === 'area' || (tagName === 'input' && element.getAttribute('type') && element.getAttribute('type').toLowerCase() === 'image');
-    }
-
-    function isTextNode(node) {
-        return node.nodeType === 3;
-    }
-
-    function isCommentNode(node) {
-        return node.nodeType === 8;
-    }
 }
 
+function isTextNode(node) {
+    return node.nodeType === 3;
+}
+
+function isCommentNode(node) {
+    return node.nodeType === 8;
+}
+
+function isElementWithAltText(element) {
+    var tagName = element.tagName.toLowerCase();
+
+    return tagName === 'img' || tagName === 'area' || (tagName === 'input' && element.getAttribute('type') && element.getAttribute('type').toLowerCase() === 'image');
+}

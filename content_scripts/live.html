@@ -20,7 +20,7 @@
     <label for="background">Background (hex)<input id="background" onchange="setColor(this.value, 'backInput')"
                                                    value="#BFBFBF"/></label>
     <input type="color" id="backInput" onchange="setColor(this.value, 'background')" value="#BFBFBF"/><br/>
-    <button onclick="evaluateColors()">Evaluate</button>
+
     <table>
         <caption>Results</caption>
         <thead>
@@ -68,14 +68,14 @@
             <td class="contrast"></td>
             <td id="normalAA"></td>
             <td id="normalAAA"></td>
-            <td class="sampleText normal" style="font-size: 14pt" onclick="getColors(event.target)">Lorem ipsum</td>
+            <td class="sampleText normal" style="font-size: 14pt">Lorem ipsum</td>
         </tr>
         <tr>
             <td>Large</td>
             <td class="contrast"></td>
             <td id="largeAA"></td>
             <td id="largeAAA"></td>
-            <td class="sampleText large" style="font-size: 18pt" onclick="getColors(event.target)">Lorem ipsum</td>
+            <td class="sampleText large" style="font-size: 18pt">Lorem ipsum</td>
         </tr>
         </tbody>
     </table>
@@ -87,28 +87,56 @@
     evaluateAllElements();
 
     function evaluateAllElements() {
-        var result, tags, elements, item, itemContent, resultStrings, label, fontSize,
+        var tags, elements, validation, elementsByValue, elementsByTag, item, itemContent, resultStrings, label, fontSize,
+            isValidAA, isValidAAA,
+            sublist, elementItem, counter,
             results = checkAllElementsInDocument(),
             resultsList = document.getElementById('results');
 
-        for (identifier in results) {
-            resultStrings = identifier.split('-');
+        for (resultLabel in results) {
+            resultStrings = resultLabel.split('-');
             label = resultStrings[0];
             fontSize = resultStrings[1];
-            result = results[identifier];
-            tags = result.tags;
-            elements = result.elements;
+
+            elements = results[resultLabel].elements;
+            validation = results[resultLabel].validation;
+
+            isValidAA = validation.isValidAA;
+            isValidAAA = validation.isValidAAA;
 
             item = document.createElement('li');
-            itemContent = label + ' - ' + fontSize + ' (' + elements.length + ' elements [' + tags.join(', ') + '])';
+            sublist = createElement('ul');
+
+            counter = 0;
+            tags = [];
+            elementsByValue = [];
+            for (tag in elements) {
+                tags.push(tag);
+                elementsByTag = elements[tag];
+                elementsByValue = elementsByValue.concat(elementsByTag);
+                counter += elementsByTag.length;
+
+                elementItem = createElement('li', tag + ' (x' + elementsByTag.length +')', {tabindex: 0});
+                elementItem.addEventListener('focus', highlightElements(elementsByTag));
+                elementItem.addEventListener('blur', removeHighlightFromElements(elementsByTag));
+                sublist.appendChild(elementItem)
+            }
+
+            itemContent = label + ' - ' + fontSize + ' - ' + isValidAA + ' - ' + isValidAAA + ' (' + counter + ' elements [' + tags.join(', ') + '])';
             item = createElement('li', itemContent, {tabindex: 0});
 
-            item.addEventListener('focus', highlight(elements));
-            item.addEventListener('blur', removeHighlight(elements));
+
+            item.addEventListener('focus', highlightElements(elementsByValue));
+            item.addEventListener('blur', removeHighlightFromElements(elementsByValue));
+
+            if(sublist.childNodes.length > 1){
+                item.appendChild(sublist)
+            }
+
             resultsList.appendChild(item);
         }
 
-        function highlight(elements) {
+        function highlightElements(elements) {
             return function () {
                 elements.forEach(function (element) {
                     element.style.outline = '1px solid red';
@@ -116,7 +144,7 @@
             }
         }
 
-        function removeHighlight(elements) {
+        function removeHighlightFromElements(elements) {
             return function () {
                 elements.forEach(function (element) {
                     element.style.outline = '';
@@ -136,16 +164,12 @@
             }
         }
 
-        if (content.length) {
+        if (content && content.length) {
             textContent = document.createTextNode(content);
             newElement.appendChild(textContent);
         }
 
         return newElement
-    }
-
-    function getColors(element) {
-        console.log(evaluateColorFromElement(element));
     }
 
     function setColor(color, id) {
