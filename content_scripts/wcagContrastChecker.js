@@ -370,7 +370,7 @@ function checkAllElementsInDocument() {
     elementsToCheck.forEach(function (element) {
         var colorEvaluation;
 
-        if (getChildText(element).trim().length || (getValue(element) && element.getAttribute('type') !== 'hidden' && element.getAttribute('type') !== 'color')) {
+        if (hasText(element) || (getValue(element) && element.getAttribute('type') !== 'hidden' && element.getAttribute('type') !== 'color')) {
             colorEvaluation = evaluateColorFromElement(element);
             tagName = element.tagName.toLowerCase();
             identifier = colorEvaluation.contrast + '-' + colorEvaluation.textType;
@@ -3280,6 +3280,10 @@ var colorcheckerSidebar = {
 
 function getValue(input) {
     return input.value;
+}
+
+function hasText(element){
+    return getChildText(element).trim().length > 0;
 }
 
 function getTextFromNode(element) {
