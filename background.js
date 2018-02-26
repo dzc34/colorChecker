@@ -1,25 +1,25 @@
 var tabId;
 
 // open/close when clicking the toolbar button
-chrome.browserAction.onClicked.addListener(injectHeadingsMapScript);
+chrome.browserAction.onClicked.addListener(injectWCAGContrastScript);
 
 // listen for messages
 chrome.runtime.onConnect.addListener(connected);
 
-function injectHeadingsMapScript(tab) {
+function injectWCAGContrastScript(tab) {
     tabId = tab.id;
 
     chrome.tabs
-        .executeScript(tabId, {file: 'content_scripts/contrastChecker.js'}, showHeadingsMap);
+        .executeScript(tabId, {file: 'content_scripts/wcagContrastChecker.js'}, showContrastChecker);
 
     chrome.tabs
-        .insertCSS({file: 'content_scripts/headingsMap.css'});
+        .insertCSS({file: 'content_scripts/wcagContrastChecker.css'});
 }
 
 function connected(portFromCS) {
     portFromCS.onMessage.addListener(function (message) {
-        if(message.action === 'update'){
-            updateHeadingsMap();
+        if (message.action === 'update') {
+            updateContrastChecker();
         } else if (message.action === 'settings') {
             var openOptionsPage = chrome.runtime.openOptionsPage();
 
@@ -28,28 +28,23 @@ function connected(portFromCS) {
     });
 }
 
-function sendActionToHeadingsMapScript(action){
+function sendActionupdateContrastCheckerScript(action) {
     var message = {action: action};
 
-    chrome.storage
-        .local.get(['showHeadLevels', 'showHeadError', 'showHeadErrorH1', 'showOutLevels', 'showOutElem', 'showOutError'], sendActionWithSettings);
-
-    function sendActionWithSettings(settings) {
-        message.settings = settings;
-
-        chrome.tabs
-            .sendMessage(tabId, message);
-    }
+    chrome.tabs
+        .sendMessage(tabId, message);
 }
 
-function showHeadingsMap() {
-    sendActionToHeadingsMapScript('toggle');
+function showContrastChecker() {
+    sendActionupdateContrastCheckerScript('toggle');
 }
 
-function updateHeadingsMap() {
-    sendActionToHeadingsMapScript('update');
+function updateContrastChecker() {
+    sendActionupdateContrastCheckerScript('update');
 }
 
-function reportSuccess() {}
+function reportSuccess() {
+}
 
-function reportError(error) {}
+function reportError(error) {
+}

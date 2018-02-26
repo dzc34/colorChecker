@@ -2,7 +2,7 @@ html, body {
     padding: 0;
     margin: 0;
 }
-#headingsMapWrapper {
+#contrastCheckerIframeWrapper {
     width: 98%;
     text-align: left;
     font-weight: normal;
@@ -16,26 +16,26 @@ html, body {
     padding: 25px 1% 5px;
 }
 
-#headingsMapWrapper h2 {
+#contrastCheckerIframeWrapper h2 {
     font-size: 1em;
     margin: 10px 5px;
 }
 
-#headingsMapWrapper section {
+#contrastCheckerIframeWrapper section {
     margin-top: 5px;
 }
-#headingsMapWrapper section + section {
+#contrastCheckerIframeWrapper section + section {
     border-top: 1px solid #CCC
 }
 
-#headingsMapWrapper p {
+#contrastCheckerIframeWrapper p {
     font-size: .8em;
     margin: 0 4px 4px;
     text-indent: 7px;
 }
 
-#headingsMapWrapper #headingsMap_outline ul,
-#headingsMapWrapper #headingsMap_headings ul {
+#contrastCheckerIframeWrapper #headingsMap_outline ul,
+#contrastCheckerIframeWrapper #headingsMap_headings ul {
     font-weight: normal;
     font-size: 1em;
     color: #444;
@@ -45,32 +45,32 @@ html, body {
     background: #FFF url(icons/tree_d.gif) 3px top repeat-y;
 }
 
-#headingsMapWrapper #headingsMap_outline ul ul,
-#headingsMapWrapper #headingsMap_headings ul ul {
+#contrastCheckerIframeWrapper #headingsMap_outline ul ul,
+#contrastCheckerIframeWrapper #headingsMap_headings ul ul {
     margin: 0;
     padding: 0;
     width: 100%;
 }
 
-#headingsMapWrapper #headingsMap_outline,
-#headingsMapWrapper #headingsMap_headings {
+#contrastCheckerIframeWrapper #headingsMap_outline,
+#contrastCheckerIframeWrapper #headingsMap_headings {
     display: none;
     border: 1px solid #CCC;
     margin-top: -1px;
 }
 
-#headingsMapWrapper #headingsMap_outline section > ul,
-#headingsMapWrapper #headingsMap_headings section > ul {
+#contrastCheckerIframeWrapper #headingsMap_outline section > ul,
+#contrastCheckerIframeWrapper #headingsMap_headings section > ul {
     font-weight: normal;
     padding-left: 10px;
     background-position: 13px top;
 }
 
-#headingsMapWrapper li:nth-last-child(1) {
+#contrastCheckerIframeWrapper li:nth-last-child(1) {
     background: #FFF url(icons/tree_c.gif) 3px top no-repeat;
 }
 
-#headingsMapWrapper li {
+#contrastCheckerIframeWrapper li {
     position: relative;
     font-weight: normal;
     font-size: 1em;
@@ -81,21 +81,21 @@ html, body {
     line-height: 1.4;
 }
 
-#headingsMapWrapper li:nth-last-child(1) {
+#contrastCheckerIframeWrapper li:nth-last-child(1) {
     background: #FFF url(icons/tree_c.gif) 3px top no-repeat;
 }
 
-#headingsMapWrapper a {
+#contrastCheckerIframeWrapper a {
     cursor: pointer;
 }
 
-#headingsMapWrapper a:focus {
+#contrastCheckerIframeWrapper a:focus {
     outline: none;
 }
 
-#headingsMapWrapper p,
-#headingsMapWrapper a,
-#headingsMapWrapper .no-headed{
+#contrastCheckerIframeWrapper p,
+#contrastCheckerIframeWrapper a,
+#contrastCheckerIframeWrapper .no-headed{
     font-weight: normal;
     text-decoration: none;
     color: #333;
@@ -107,18 +107,18 @@ html, body {
     margin-left: -2px;
 }
 
-#headingsMapWrapper a span {
+#contrastCheckerIframeWrapper a span {
     font-weight: normal;
     font-size: 1em;
 }
 
-#headingsMapWrapper .head_number:after {
+#contrastCheckerIframeWrapper .head_number:after {
     content: ' ';
 }
 
-#headingsMapWrapper #headingsMap_refresh,
-#headingsMapWrapper #headingsMap_settings,
-#headingsMapWrapper #headingsMap_closer {
+#contrastCheckerIframeWrapper #headingsMap_refresh,
+#contrastCheckerIframeWrapper #headingsMap_settings,
+#contrastCheckerIframeWrapper #headingsMap_closer {
     position: absolute;
     top: 0;
     width: 20px;
@@ -127,31 +127,31 @@ html, body {
     opacity: .6;
 }
 
-#headingsMapWrapper #headingsMap_refresh:hover,
-#headingsMapWrapper #headingsMap_refresh:focus,
-#headingsMapWrapper #headingsMap_settings:hover,
-#headingsMapWrapper #headingsMap_settings:focus,
-#headingsMapWrapper #headingsMap_closer:hover,
-#headingsMapWrapper #headingsMap_closer:focus {
+#contrastCheckerIframeWrapper #headingsMap_refresh:hover,
+#contrastCheckerIframeWrapper #headingsMap_refresh:focus,
+#contrastCheckerIframeWrapper #headingsMap_settings:hover,
+#contrastCheckerIframeWrapper #headingsMap_settings:focus,
+#contrastCheckerIframeWrapper #headingsMap_closer:hover,
+#contrastCheckerIframeWrapper #headingsMap_closer:focus {
     opacity: .9;
 }
 
-#headingsMapWrapper #headingsMap_refresh {
+#contrastCheckerIframeWrapper #headingsMap_refresh {
     right: 52px;
     background: center/contain no-repeat url(./icons/refresh.png);
 }
 
-#headingsMapWrapper #headingsMap_settings {
+#contrastCheckerIframeWrapper #headingsMap_settings {
     right: 27px;
     background: center/contain no-repeat url(./icons/settings.png);
 }
 
-#headingsMapWrapper #headingsMap_closer {
+#contrastCheckerIframeWrapper #headingsMap_closer {
     right: 2px;
     background: center/contain no-repeat url(./icons/close.png);
 }
 
-#headingsMapWrapper:before {
+#contrastCheckerIframeWrapper:before {
     content: 'HeadingsMap';
     position: absolute;
     top: 0;
@@ -161,7 +161,7 @@ html, body {
     font-size: 14px;
 }
 
-#headingsMapWrapper #outlineTab, #headingsMapWrapper #headingsTab {
+#contrastCheckerIframeWrapper #outlineTab, #contrastCheckerIframeWrapper #headingsTab {
     font-weight: normal;
     font-size: 1em;
     color: #444;
@@ -177,15 +177,15 @@ html, body {
     border-width: 1px 1px 0;
 }
 
-#headingsMapWrapper a#outlineTab.active, #headingsMapWrapper a#headingsTab.active {
+#contrastCheckerIframeWrapper a#outlineTab.active, #contrastCheckerIframeWrapper a#headingsTab.active {
     font-weight: normal;
     font-size: 1em;
     color: #444;
     background-color: #FFF;
 }
 
-#headingsMapWrapper .no-headed,
-#headingsMapWrapper .head_error {
+#contrastCheckerIframeWrapper .no-headed,
+#contrastCheckerIframeWrapper .head_error {
     font-weight: normal;
     font-size: 1em;
     background-color: #FF7575

@@ -23,10 +23,6 @@
   "web_accessible_resources": [
     "html/*"
   ],
-  "options_ui": {
-    "page": "options/options.html",
-    "chrome_style": true
-  },
   "commands": {
     "_execute_browser_action": {
       "suggested_key": {
