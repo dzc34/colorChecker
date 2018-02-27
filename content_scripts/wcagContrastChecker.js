@@ -1,7 +1,9 @@
 (function () {
         var body, bodyParent, iframeWidget, iframeContentDocument, iframeBody, highlightedElements,
             contrastCheckerIframeWrapperId = 'contrastCheckerIframeWrapper',
-            contrastColorCheckerPort = chrome.runtime.connect({name: 'port-from-cs'});
+            contrastColorCheckerPort = chrome.runtime.connect({name: 'port-from-cs'}),
+            mutationObserverParams = {childList: true, subtree: true},
+            defaultDebounceTime = 250;
 
         if (window.hasContrastColorCheckerRun) {
             return;
@@ -10,6 +12,23 @@
 
         body = document.body;
         bodyParent = body.parentNode;
+
+        let bodyMutationEndingObserver, onEndingDOMChangeCallback;
+
+        function replaceAll(str, find, replace) {
+            return str.replace(new RegExp(find, 'g'), replace);
+        }
+
+        onEndingDOMChangeCallback = function (mutations) {
+            var colorContrastWidget = getWidget(),
+                iframeBodyInnerHTML = iframeBody ? replaceAll(iframeBody.innerHTML, ' style="display: none;"', '') : '',
+                contrastCheckerWidgetInnerHTML = '<div id="' + contrastCheckerIframeWrapperId + '">' + replaceAll(colorContrastWidget.innerHTML, ' style="display: none;"', '') + '</div>';
+
+            if (replaceAll(iframeBodyInnerHTML, ' collapsed', '') != replaceAll(contrastCheckerWidgetInnerHTML, ' collapsed', '')) {
+                updateWidget(colorContrastWidget);
+            }
+        };
+        bodyMutationEndingObserver = addMutationObserver(body, mutationObserverParams, debounceFn(onEndingDOMChangeCallback, false));
 
         chrome.runtime.onMessage.addListener((message) => {
             let colorContrastWidget,
@@ -30,13 +49,17 @@
         });
 
         function getWidget() {
-            var tags, elements, validation, elementsByValue, elementsByTag, item, itemContent, resultStrings, label,
+            var tags, elements, validation, colors, elementsByValue, elementsByTag, item, itemContent, itemStyle,
+                resultStrings, label,
                 fontSize,
                 isValidAA, isValidAAA,
                 sublist, elementItem, counter,
                 results = checkAllElementsInDocument(),
                 widgetContent = createElement('div'),
+                refreshButton= createElement('button', 'refresh', {id: 'refresh'}),
+                closeButton = createElement('button', 'close', {id: 'close'}),
                 contrastResults = createElement('ul', '', {id: 'results'}),
+                finalResults = createTableResults(),
                 notTested = createElement('ul', '', {id: 'notTested'});
 
             for (resultLabel in results) {
@@ -46,13 +69,13 @@
 
                 elements = results[resultLabel].elements;
                 validation = results[resultLabel].validation;
+                colors = results[resultLabel].colors;
 
                 if (validation) {
                     isValidAA = validation.isValidAA;
                     isValidAAA = validation.isValidAAA;
                 }
 
-                item = document.createElement('li');
                 sublist = createElement('ul');
 
                 counter = 0;
@@ -72,12 +95,14 @@
                 }
 
                 itemContent = label;
-                if(validation){
+                if (validation) {
                     itemContent += ' - ' + fontSize + ' - ' + isValidAA + ' - ' + isValidAAA;
                 }
                 itemContent += ' (' + counter + ' elements [' + tags.join(', ') + '])';
 
-                item = createElement('li', itemContent, {tabindex: 0});
+                itemStyle = colors ? 'color:' + RGBObjectToString(colors.foregroundColor) + ';background-color:' + RGBObjectToString(colors.backgroundColor) : ''
+
+                item = createElement('li', itemContent, {tabindex: 0, style: itemStyle});
 
 
                 item.addEventListener('focus', highlightElements(elementsByValue));
@@ -87,12 +112,47 @@
                     item.appendChild(sublist)
                 }
 
-                widgetContent.appendChild(item);
+                contrastResults.appendChild(item);
             }
 
+            refreshButton.onclick = refreshWidget;
+            closeButton.onclick = closeWidget;
+
+            widgetContent.appendChild(refreshButton);
+            widgetContent.appendChild(closeButton);
             widgetContent.appendChild(contrastResults);
             widgetContent.appendChild(notTested);
+
             return widgetContent;
+
+            function createTableResults(){
+                var table = createElement('table', '', {id: 'results'}),
+                    header = createElement('thead'),
+                    headerRow = createElement('tr'),
+                    emptyHeader = createElement('th'),
+                    AAHeader = createElement('th', 'AA'),
+                    AAAHeader = createElement('th', 'AAA'),
+                    contrastHeader = createElement('th', 'contrast'),
+                    ElementsHeader = createElement('th', 'Elements affected');
+
+                headerRow.appendChild(emptyHeader);
+                headerRow.appendChild(AAHeader);
+                headerRow.appendChild(AAAHeader);
+                headerRow.appendChild(contrastHeader);
+                headerRow.appendChild(ElementsHeader);
+                header.appendChild(headerRow);
+                table.appendChild(header);
+
+                return table;
+            }
+        }
+
+        function refreshWidget() {
+            sendMessageToBackgroundScript({action: 'update'});
+        }
+
+        function sendMessageToBackgroundScript(messageObject) {
+            contrastColorCheckerPort.postMessage(messageObject);
         }
 
         function highlightElements(elements) {
@@ -115,15 +175,6 @@
 
         function openWidget(widgetContent) {
             iframeWidget = createIframeWidget(widgetContent);
-        }
-
-        function closeWidget() {
-            var widget = document.getElementById(contrastCheckerIframeWrapperId),
-                widgetParent = widget.parentNode;
-
-            widgetParent.removeChild(widget);
-            widgetParent.removeAttribute('data-contrast-checker-active');
-            removeHighlightFromElements(highlightedElements)();
         }
 
         function createIframeWidget(widgetContent) {
@@ -165,6 +216,16 @@
             xmlhttp.send(null);
         }
 
+        function closeWidget() {
+            var widget = document.getElementById(contrastCheckerIframeWrapperId),
+                widgetParent = widget.parentNode;
+
+            widgetParent.removeChild(widget);
+            widgetParent.removeAttribute('data-contrast-checker-active');
+            removeHighlightFromElements(highlightedElements)();
+            bodyMutationEndingObserver();
+        }
+
         function updateWidget(widgetContent) {
             while (iframeBody.firstChild) {
                 iframeBody.removeChild(iframeBody.firstChild);
@@ -192,23 +253,7 @@
             return newElement
         }
 
-//-----------------------------------
-//-----------------------------------
-        function hexToRGB(hex) {
-            var rgbValue;
-
-            hex = shorthandHexToExtended(hex);
-
-            rgbValue = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-
-            return rgbValue ? {
-                r: parseInt(rgbValue[1], 16),
-                g: parseInt(rgbValue[2], 16),
-                b: parseInt(rgbValue[3], 16)
-            } : null;
-        }
-
-        function shorthandHexToExtended(shorthandHex) {
+        function hexShorthandToExtended(shorthandHex) {
             var shorthandRegex = /^#?([a-f\d])([a-f\d])([a-f\d])$/i;
 
             return shorthandHex.replace(shorthandRegex, function (m, r, g, b) {
@@ -216,13 +261,7 @@
             });
         }
 
-        function RGBToHex(RGBColor) {
-            var RGBValues = extractRGBValues(RGBColor);
-
-            return '#' + decToHex(RGBValues.r) + decToHex(RGBValues.g) + decToHex(RGBValues.b);
-        }
-
-        function extractRGBValues(color) {
+        function RGBStringToObject(color) {
             var separator, rgbValues,
                 plainParameters = color.replace('rgb(', '').replace('rgba(', '').replace('(', '').replace(')', '').replace(/ /g, '');
 
@@ -269,22 +308,41 @@
             return baseString.charAt((positionAsNumber - positionAsNumber % 16) / 16) + baseString.charAt(positionAsNumber % 16);
         }
 
-        function hexRGBString(rgbObject) {
+        function RGBObjectToString(rgbObject) {
             return 'rgb(' + rgbObject.r + ',' + rgbObject.g + ',' + rgbObject.b + ')';
         }
 
-        function RGBhex(originId, destId) {
+        function hexToRGB(hex) {
+            var rgbValue;
+
+            hex = hexShorthandToExtended(hex);
+
+            rgbValue = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+
+            return rgbValue ? {
+                r: parseInt(rgbValue[1], 16),
+                g: parseInt(rgbValue[2], 16),
+                b: parseInt(rgbValue[3], 16)
+            } : null;
+        }
+
+        function RGBStringToHex(RGBColor) {
+            var RGBValues = RGBStringToObject(RGBColor);
+
+            return '#' + decToHex(RGBValues.r) + decToHex(RGBValues.g) + decToHex(RGBValues.b);
+        }
+
+        function RGBStringToHex(originId, destId) {
             var originalValue = document.getElementById(originId).value,
-                RGBValues = extractRGBValues(originalValue);
+                RGBValues = RGBStringToObject(originalValue);
 
             document.getElementById(destId).value = '#' + decToHex(RGBValues.r) + decToHex(RGBValues.g) + decToHex(RGBValues.b);
         }
 
-// WCAG 2.0 color test
         function getContrastDiff(foreground, background) {
             var higherValue, lowerValue, contrastDiff,
-                foregroundLuminosity = obtenluminosidad(foreground.r, foreground.g, foreground.b, 255),
-                backgroundLuminosity = obtenluminosidad(background.r, background.g, background.b, 255);
+                foregroundLuminosity = getLuminosity(foreground.r, foreground.g, foreground.b, 255),
+                backgroundLuminosity = getLuminosity(background.r, background.g, background.b, 255);
 
             if (foregroundLuminosity > backgroundLuminosity) {
                 higherValue = foregroundLuminosity;
@@ -297,73 +355,45 @@
             contrastDiff = Math.round(contrastDiff * 100) / 100; // round to two decimals
 
             return contrastDiff;
-        }
 
-// WCAG 1.0 color test
-        function getBrightness(rgbColorParams) {
-            var brightness = ((rgbColorParams.r * 299) + (rgbColorParams.g * 587) + (rgbColorParams.b * 114)) / 1000;
+            function getLuminosity(fRed, fGreen, fBlue, fFullScale) {
+                var fRedRGB = fRed / fFullScale,
+                    fGreenRGB = fGreen / fFullScale,
+                    fBlueRGB = fBlue / fFullScale,
+                    fLinearisedRed, fLinearisedGreen, fLinearisedBlue;
 
-            return brightness;
-        }
-
-// WCAG 1.0 color test
-        function getBrightnessDiff(foreground, background) {
-            var brightnessForeground = getBrightness(foreground),
-                brightnessBackground = getBrightness(background);
-
-            return parseInt(Math.abs(brightnessBackground - brightnessForeground), 10);
-            // limit: 125
-        }
-
-        function getColorDiff(foreground, background) {
-            return Math.abs(background.r - foreground.r) + Math.abs(background.g - foreground.g) + Math.abs(background.b - foreground.b);
-            // limit: 500
-        }
-
-        function obtenluminosidad(fRed, fGreen, fBlue, fFullScale) {
-            var fRedRGB = fRed / fFullScale,
-                fGreenRGB = fGreen / fFullScale,
-                fBlueRGB = fBlue / fFullScale,
-                fLinearisedRed, fLinearisedGreen, fLinearisedBlue;
-
-            if (fRedRGB <= 0.03928) {
-                fLinearisedRed = fRedRGB / 12.92;
-            } else {
-                fLinearisedRed = Math.pow(((fRedRGB + 0.055) / 1.055), 2.4);
+                if (fRedRGB <= 0.03928) {
+                    fLinearisedRed = fRedRGB / 12.92;
+                } else {
+                    fLinearisedRed = Math.pow(((fRedRGB + 0.055) / 1.055), 2.4);
+                }
+                if (fGreenRGB <= 0.03928) {
+                    fLinearisedGreen = fGreenRGB / 12.92;
+                } else {
+                    fLinearisedGreen = Math.pow(((fGreenRGB + 0.055) / 1.055), 2.4);
+                }
+                if (fBlueRGB <= 0.03928) {
+                    fLinearisedBlue = fBlueRGB / 12.92;
+                } else {
+                    fLinearisedBlue = Math.pow(((fBlueRGB + 0.055) / 1.055), 2.4);
+                }
+                return (0.2126 * fLinearisedRed + 0.7152 * fLinearisedGreen + 0.0722 * fLinearisedBlue);
             }
-            if (fGreenRGB <= 0.03928) {
-                fLinearisedGreen = fGreenRGB / 12.92;
-            } else {
-                fLinearisedGreen = Math.pow(((fGreenRGB + 0.055) / 1.055), 2.4);
-            }
-            if (fBlueRGB <= 0.03928) {
-                fLinearisedBlue = fBlueRGB / 12.92;
-            } else {
-                fLinearisedBlue = Math.pow(((fBlueRGB + 0.055) / 1.055), 2.4);
-            }
-            return (0.2126 * fLinearisedRed + 0.7152 * fLinearisedGreen + 0.0722 * fLinearisedBlue);
         }
 
-
-//-----------------------------------
-//-----------------------------------
         function evaluateColorFromElement(element) {
-            var foregroundColor, backgroundColor, fontSize, fontWeight, isBold, textType, contrast, evaluation,
+            var foregroundColor, fontSize, fontWeight, isBold, textType, contrast, evaluation,
                 getComputedStyle = document.defaultView.getComputedStyle(element, null),
                 largeSize = 24,
                 normalSize = 18.6667,
-                isVisible = getComputedStyle.getPropertyValue('display') !== 'none' && getComputedStyle.getPropertyValue('visibility') !== 'hidden';
+                backgroundColor = backgroundFromAncestorOrSelf(element),
+                isVisible = backgroundColor && getComputedStyle.getPropertyValue('display') !== 'none' && getComputedStyle.getPropertyValue('visibility') !== 'hidden';
 
             fontSize = parseInt(getComputedStyle.getPropertyValue('font-size').replace('px', ''));
             fontWeight = getComputedStyle.getPropertyValue('font-weight');
             isBold = parseInt(fontWeight) >= 700 || fontWeight === 'bold' || fontWeight == 'bolder';
 
             textType = (fontSize >= largeSize || (fontSize >= normalSize && isBold)) ? 'large' : 'normal';
-
-            foregroundColor = extractRGBValues(getComputedStyle.getPropertyValue('color'));
-            backgroundColor = backgroundFromAncestorOrSelf(element);
-
-            contrast = getContrastDiff(foregroundColor, backgroundColor);
 
             evaluation = {
                 element: element,
@@ -373,6 +403,11 @@
             };
 
             if (isVisible) {
+                foregroundColor = RGBStringToObject(getComputedStyle.getPropertyValue('color'));
+                contrast = getContrastDiff(foregroundColor, backgroundColor);
+
+                evaluation.foregroundColor = foregroundColor;
+                evaluation.backgroundColor = backgroundColor;
                 evaluation.contrast = contrast;
                 if (textType === 'normal') {
                     evaluation.isValidAA = contrast >= 4.5;
@@ -384,30 +419,30 @@
             }
 
             return evaluation;
-        }
 
-//-----------------------------------
-//-----------------------------------
-        function backgroundFromAncestorOrSelf(element) {
-            var defaultView = document.defaultView,
-                getComputedStyle = defaultView.getComputedStyle(element, null),
-                backgroundColor = getComputedStyle.getPropertyValue('background-color'),
-                RGBValues = extractRGBValues(backgroundColor),
-                isTransparent = RGBValues.o === 0;
+            function backgroundFromAncestorOrSelf(element) {
+                var defaultView = document.defaultView,
+                    getComputedStyle = defaultView.getComputedStyle(element, null),
+                    backgroundColor = getComputedStyle.getPropertyValue('background-color'),
+                    RGBValues = RGBStringToObject(backgroundColor),
+                    isTransparent = RGBValues.o === 0,
+                    isVisible = getComputedStyle.getPropertyValue('display') !== 'none' && getComputedStyle.getPropertyValue('visibility') !== 'hidden';
 
-            if (isTransparent || backgroundColor === 'transparent' || !backgroundColor) {
-                if (element.parentNode.tagName.toLowerCase() !== 'body') {
-                    return backgroundFromAncestorOrSelf(element.parentNode);
-                } else {
-                    return {r: 255, g: 255, b: 255};
+                if (!isVisible) {
+                    return false;
                 }
+
+                if (isTransparent || backgroundColor === 'transparent' || !backgroundColor) {
+                    if (element.parentNode.tagName.toLowerCase() !== 'body') {
+                        return backgroundFromAncestorOrSelf(element.parentNode);
+                    } else {
+                        return {r: 255, g: 255, b: 255};
+                    }
+                }
+
+                return RGBStringToObject(backgroundColor);
             }
-
-            return extractRGBValues(backgroundColor);
         }
-
-//-----------------------------------
-//-----------------------------------
 
         function checkAllElementsInDocument() {
             var elementsToCheck, identifier, tagName,
@@ -435,7 +470,7 @@
                         identifier = colorEvaluation.contrast + '-' + colorEvaluation.textType;
 
                         if (!results[identifier]) {
-                            results[identifier] = {elements: {}, validation: {}};
+                            results[identifier] = {elements: {}, validation: {}, colors: {}};
                             results[identifier].elements[tagName] = [];
                         } else if (!results[identifier].elements[tagName]) {
                             results[identifier].elements[tagName] = [];
@@ -445,6 +480,9 @@
 
                         results[identifier].validation.isValidAA = colorEvaluation.isValidAA;
                         results[identifier].validation.isValidAAA = colorEvaluation.isValidAAA;
+
+                        results[identifier].colors.foregroundColor = colorEvaluation.foregroundColor;
+                        results[identifier].colors.backgroundColor = colorEvaluation.backgroundColor;
                     } else {
                         if (!results['not_tested']) {
                             results['not_tested'] = {elements: {}};
@@ -521,6 +559,38 @@
 
             return ((tagName === 'img' || tagName === 'area') && element.getAttribute('alt')) || (tagName === 'input' && element.getAttribute('type') && element.getAttribute('type').toLowerCase() === 'image');
         }
-    }
 
+        function debounceFn(func, executeAtTheBeginning, wait) {
+            var timeout;
+
+            return function () {
+                var callNow,
+                    context = this,
+                    args = arguments,
+                    later = function () {
+                        timeout = null;
+                        if (!executeAtTheBeginning) {
+                            func.apply(context, args);
+                        }
+                    };
+
+                callNow = executeAtTheBeginning && !timeout;
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait || defaultDebounceTime);
+                if (callNow) {
+                    func.apply(context, args);
+                }
+            };
+        }
+
+        function addMutationObserver(elementToObserve, config, callback) {
+            // Create an observer instance
+            var observer = new MutationObserver(callback);
+
+            // Start observing the target node for configured mutations
+            observer.observe(elementToObserve, config);
+
+            return observer.disconnect;
+        }
+    }
 )();
