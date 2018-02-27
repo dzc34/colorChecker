@@ -49,22 +49,26 @@
         });
 
         function getWidget() {
-            var tags, elements, validation, colors, elementsByValue, elementsByTag, item, itemContent, itemStyle,
-                resultStrings, label,
+            var tags, elements, validation, colors, elementsByValue, elementsByTag,
+                resultStrings, contrast,
                 fontSize,
                 isValidAA, isValidAAA,
                 sublist, elementItem, counter,
+                rowContent, newRow,
                 results = checkAllElementsInDocument(),
                 widgetContent = createElement('div'),
-                refreshButton= createElement('button', 'refresh', {id: 'refresh'}),
-                closeButton = createElement('button', 'close', {id: 'close'}),
-                contrastResults = createElement('ul', '', {id: 'results'}),
-                finalResults = createTableResults(),
-                notTested = createElement('ul', '', {id: 'notTested'});
+                refreshButton = createElement('button', {content: 'refresh', id: 'refresh'}),
+                closeButton = createElement('button', {content: 'close', id: 'close'}),
+                contrastResults = createTable({
+                    headers: ['', 'AA', 'AAA', 'Contrast', 'Size', 'Elements'],
+                    class: 'results'
+                }),
+                notTested = createElement('ul', {class: 'notTested'});
 
             for (resultLabel in results) {
+                rowContent = [];
                 resultStrings = resultLabel.split('-');
-                label = resultStrings[0];
+                contrast = resultStrings[0];
                 fontSize = resultStrings[1];
 
                 elements = results[resultLabel].elements;
@@ -88,31 +92,42 @@
                     elementsByValue = elementsByValue.concat(elementsByTag);
                     counter += elementsByTag.length;
 
-                    elementItem = createElement('li', tag + ' (x' + elementsByTag.length + ')', {tabindex: 0});
+                    elementItem = createElement('li', {content: tag + ' (x' + elementsByTag.length + ')', tabindex: 0});
                     elementItem.addEventListener('focus', highlightElements(elementsByTag));
                     elementItem.addEventListener('blur', removeHighlightFromElements(elementsByTag));
                     sublist.appendChild(elementItem)
                 }
 
-                itemContent = label;
                 if (validation) {
-                    itemContent += ' - ' + fontSize + ' - ' + isValidAA + ' - ' + isValidAAA;
+                    rowContent.push(isValidAA);
+                    rowContent.push(isValidAAA);
+                    rowContent.push(contrast);
+                    rowContent.push(fontSize);
                 }
-                itemContent += ' (' + counter + ' elements [' + tags.join(', ') + '])';
 
-                itemStyle = colors ? 'color:' + RGBObjectToString(colors.foregroundColor) + ';background-color:' + RGBObjectToString(colors.backgroundColor) : ''
+                rowContent.push(counter + ' [' + tags.join(', ') + ']');
 
-                item = createElement('li', itemContent, {tabindex: 0, style: itemStyle});
-
-
-                item.addEventListener('focus', highlightElements(elementsByValue));
-                item.addEventListener('blur', removeHighlightFromElements(elementsByValue));
+//                itemStyle = colors ? 'color:' + RGBObjectToString(colors.foregroundColor) + ';background-color:' + RGBObjectToString(colors.backgroundColor) : '';
 
                 if (sublist.childNodes.length > 1) {
-                    item.appendChild(sublist)
+                    rowContent.unshift('+');
+                }else{
+                    rowContent.unshift('');
                 }
 
-                contrastResults.appendChild(item);
+                newRow = createRow(rowContent, {tabindex: 0});
+                newRow.addEventListener('focus', highlightElements(elementsByValue));
+                newRow.addEventListener('blur', removeHighlightFromElements(elementsByValue));
+
+                if (sublist.childNodes.length > 1) {
+                    newRow.querySelectorAll('td:last-child')[0].appendChild(sublist)
+                }
+
+                if (validation) {
+                    contrastResults.appendChild(newRow);
+                } else {
+                    notTested.appendChild(newRow);
+                }
             }
 
             refreshButton.onclick = refreshWidget;
@@ -125,21 +140,31 @@
 
             return widgetContent;
 
-            function createTableResults(){
-                var table = createElement('table', '', {id: 'results'}),
-                    header = createElement('thead'),
-                    headerRow = createElement('tr'),
-                    emptyHeader = createElement('th'),
-                    AAHeader = createElement('th', 'AA'),
-                    AAAHeader = createElement('th', 'AAA'),
-                    contrastHeader = createElement('th', 'contrast'),
-                    ElementsHeader = createElement('th', 'Elements affected');
+            function createRow(contentArray, parameters) {
+                var row = createElement('tr');
 
-                headerRow.appendChild(emptyHeader);
-                headerRow.appendChild(AAHeader);
-                headerRow.appendChild(AAAHeader);
-                headerRow.appendChild(contrastHeader);
-                headerRow.appendChild(ElementsHeader);
+                contentArray.forEach(function (cellContent) {
+                    row.appendChild(createElement('td', {content: cellContent}));
+                });
+
+                if (parameters) {
+                    for (var parameterName in parameters) {
+                        row.setAttribute(parameterName, parameters[parameterName]);
+                    }
+                }
+
+                return row;
+            }
+
+            function createTable(config) {
+                var table = createElement('table', config.class ? {class: config.class} : {}),
+                    header = createElement('thead'),
+                    headerRow = createElement('tr');
+
+                config.headers.forEach(function (header) {
+                    headerRow.appendChild(createElement('th', {content: header}));
+                });
+
                 header.appendChild(headerRow);
                 table.appendChild(header);
 
@@ -182,7 +207,7 @@
                 baseURL = chrome.extension.getURL('html/'),
                 iframeCSS,
                 iframeHead,
-                iframeWidget = createElement('iframe', '', {'id': contrastCheckerIframeWrapperId}),
+                iframeWidget = createElement('iframe', {'id': contrastCheckerIframeWrapperId}),
                 iframeWidgetContentWindow;
 
             bodyParent.insertBefore(iframeWidget, body);
@@ -235,19 +260,19 @@
             removeHighlightFromElements(highlightedElements)();
         }
 
-        function createElement(tagName, content, parameters) {
+        function createElement(tagName, parameters) {
             var newElement = document.createElement(tagName),
                 textContent;
 
             if (parameters) {
                 for (var parameterName in parameters) {
-                    newElement.setAttribute(parameterName, parameters[parameterName]);
+                    if (parameterName !== 'content') {
+                        newElement.setAttribute(parameterName, parameters[parameterName]);
+                    } else {
+                        textContent = document.createTextNode(parameters[parameterName]);
+                        newElement.appendChild(textContent);
+                    }
                 }
-            }
-
-            if (content && content.length) {
-                textContent = document.createTextNode(content);
-                newElement.appendChild(textContent);
             }
 
             return newElement
