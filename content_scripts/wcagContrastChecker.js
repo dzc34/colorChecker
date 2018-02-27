@@ -54,15 +54,16 @@
                 fontSize,
                 isValidAA, isValidAAA,
                 sublist, elementItem, counter,
-                rowContent, newRow,
+                rowContent, newRow, rowClass,
                 results = checkAllElementsInDocument(),
                 widgetContent = createElement('div'),
                 refreshButton = createElement('button', {content: 'refresh', id: 'refresh'}),
                 closeButton = createElement('button', {content: 'close', id: 'close'}),
                 contrastResults = createTable({
-                    headers: ['', 'AA', 'AAA', 'Contrast', 'Size', 'Elements'],
-                    class: 'results'
+                    headers: [{content: 'Contrast', colspan: 2}, 'Size', 'Elements'],
+                    class: 'results AA'
                 }),
+                tableBody = contrastResults.querySelector('tbody'),
                 notTested = createElement('ul', {class: 'notTested'});
 
             for (resultLabel in results) {
@@ -92,16 +93,16 @@
                     elementsByValue = elementsByValue.concat(elementsByTag);
                     counter += elementsByTag.length;
 
-                    elementItem = createElement('li', {content: tag + ' (x' + elementsByTag.length + ')', tabindex: 0});
+                    elementItem = createElement('li', {content: tag + ' (' + elementsByTag.length + ')', tabindex: 0});
                     elementItem.addEventListener('focus', highlightElements(elementsByTag));
                     elementItem.addEventListener('blur', removeHighlightFromElements(elementsByTag));
                     sublist.appendChild(elementItem)
                 }
 
                 if (validation) {
-                    rowContent.push(isValidAA);
-                    rowContent.push(isValidAAA);
-                    rowContent.push(contrast);
+                    rowClass = isValidAA ? 'validAA' : 'invalidAA';
+                    rowClass += isValidAAA ? ' validAAA' : ' invalidAAA';
+                    rowContent.push({content: contrast, rowClass: rowClass, class: 'contrast-value'});
                     rowContent.push(fontSize);
                 }
 
@@ -110,9 +111,7 @@
 //                itemStyle = colors ? 'color:' + RGBObjectToString(colors.foregroundColor) + ';background-color:' + RGBObjectToString(colors.backgroundColor) : '';
 
                 if (sublist.childNodes.length > 1) {
-                    rowContent.unshift('+');
-                }else{
-                    rowContent.unshift('');
+                    rowContent._ezpandable = true;
                 }
 
                 newRow = createRow(rowContent, {tabindex: 0});
@@ -124,7 +123,7 @@
                 }
 
                 if (validation) {
-                    contrastResults.appendChild(newRow);
+                    tableBody.appendChild(newRow);
                 } else {
                     notTested.appendChild(newRow);
                 }
@@ -138,13 +137,34 @@
             widgetContent.appendChild(contrastResults);
             widgetContent.appendChild(notTested);
 
+            sortTable(tableBody, 1)
+
             return widgetContent;
 
             function createRow(contentArray, parameters) {
-                var row = createElement('tr');
+                var toggleButton, cell,
+                    row = createElement('tr');
+
+                if (contentArray._ezpandable) {
+                    toggleButton = createElement('button', {content: '+', class: 'show-tags'});
+                    toggleButton.onclick = toggle(row);
+                    cell = createElement('td');
+                    cell.appendChild(toggleButton);
+                    row.appendChild(cell);
+                } else {
+                    row.appendChild(createElement('td'));
+                }
 
                 contentArray.forEach(function (cellContent) {
-                    row.appendChild(createElement('td', {content: cellContent}));
+                    if (typeof cellContent === 'string') {
+                        cell = createElement('td', {content: cellContent});
+                        row.appendChild(cell);
+                    } else {
+                        cell = createElement('td', {content: cellContent.content});
+                        cell.setAttribute('class', cellContent.class);
+                        row.setAttribute('class', cellContent.rowClass);
+                        row.appendChild(cell);
+                    }
                 });
 
                 if (parameters) {
@@ -154,21 +174,64 @@
                 }
 
                 return row;
+
+                function toggle(row) {
+                    return function () {
+                        row.classList.toggle('expanded');
+                    }
+                }
             }
 
             function createTable(config) {
-                var table = createElement('table', config.class ? {class: config.class} : {}),
-                    header = createElement('thead'),
+                var headerCell,
+                    tableWrapper = createElement('div'),
+                    levelSwitcher = createSwitcher(switchTableClass),
+                    table = createElement('table', config.class ? {class: config.class} : {}),
+                    thead = createElement('thead'),
+                    tbody = createElement('tbody'),
                     headerRow = createElement('tr');
 
-                config.headers.forEach(function (header) {
-                    headerRow.appendChild(createElement('th', {content: header}));
+                config.headers.forEach(function (header, index) {
+                    headerCell = createElement('th', typeof header === 'string' ? {content: header} : header);
+                    headerCell.onclick = sort(table, index)
+                    headerRow.appendChild(headerCell);
                 });
 
-                header.appendChild(headerRow);
-                table.appendChild(header);
+                thead.appendChild(headerRow);
+                table.appendChild(thead);
+                table.appendChild(tbody);
+                tableWrapper.appendChild(levelSwitcher);
+                tableWrapper.appendChild(table);
 
-                return table;
+                return tableWrapper;
+
+                function sort(table, index){
+                    return function(){
+                        sortTable(table.querySelectorAll('tbody')[0], index)
+                    }
+                }
+
+                function switchTableClass(classValue) {
+                    table.classList.remove('AA');
+                    table.classList.remove('AAA');
+                    table.classList.add(classValue);
+                    console.log(table.classList)
+                }
+
+                function createSwitcher(callback) {
+                    var switcher = createElement('select'),
+                        optionAA = createElement('option', {content: 'level AA', value: 'AA', selected: 'selected'}),
+                        optionAAA = createElement('option', {content: 'level AAA', value: 'AAA'});
+
+                    switcher.appendChild(optionAA);
+                    switcher.appendChild(optionAAA);
+
+                    switcher.onchange = function (event) {
+                        callback(event.target.value)
+                    };
+
+                    return switcher;
+                }
             }
         }
 
@@ -616,6 +679,35 @@
             observer.observe(elementToObserve, config);
 
             return observer.disconnect;
+        }
+
+        function sortTable(table, columnIndex) {
+            var rows, rowsLength, switching, shouldSwitch, valueA, valueB;
+
+            switching = true;
+
+            while (switching) {
+                switching = false;
+                rows = table.querySelectorAll('tr');
+                rowsLength = rows.length;
+
+                for (var i = 0; i < (rowsLength - 1); i++) {
+                    shouldSwitch = false;
+
+                    valueA = parseFloat(rows[i].querySelectorAll('td')[columnIndex].textContent);
+                    valueB = parseFloat(rows[i + 1].querySelectorAll('td')[columnIndex].textContent);
+
+                    if (valueA > valueB) {
+                        shouldSwitch = true;
+                        break;
+                    }
+                }
+
+                if (shouldSwitch) {
+                    rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
+                    switching = true;
+                }
+            }
         }
     }
 )();

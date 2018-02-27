@@ -2,6 +2,41 @@ html, body {
     padding: 0;
     margin: 0;
 }
+
 th, td {
     vertical-align: top;
+}
+
+th {
+    text-align: left;
+}
+
+tr.expanded ul {
+    display: block;
+}
+
+tr ul {
+    display: none;
+}
+
+thead tr {
+    background-color: #DDDDDD;
+}
+
+tbody tr:nth-child(2n) {
+    background-color: #EFEFEF;
+}
+
+.contrast-value {
+    padding-left: 15px;
+}
+
+table.AA tr.validAA .contrast-value,
+table.AAA tr.validAAA .contrast-value {
+    background: transparent url(icons/ok.png) left top no-repeat;
+}
+
+table.AA tr.invalidAA .contrast-value,
+table.AAA tr.invalidAAA .contrast-value {
+    background: transparent url(icons/error.png) left top no-repeat;
 }
