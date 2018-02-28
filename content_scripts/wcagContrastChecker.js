@@ -496,7 +496,7 @@
             }
         }
 
-        function evaluateColorFromElement(element) {
+        function evaluateColorContrastFromElement(element) {
             var foregroundColor, fontSize, fontWeight, isBold, textType, contrast, evaluation,
                 getComputedStyle = document.defaultView.getComputedStyle(element, null),
                 largeSize = 24,
@@ -579,7 +579,7 @@
                 var colorEvaluation;
 
                 if (hasText(element) || (getValue(element) && element.getAttribute('type') !== 'hidden' && element.getAttribute('type') !== 'color')) {
-                    colorEvaluation = evaluateColorFromElement(element);
+                    colorEvaluation = evaluateColorContrastFromElement(element);
                     tagName = element.tagName.toLowerCase();
                     if (colorEvaluation.contrast) {
                         identifier = colorEvaluation.contrast + '-' + colorEvaluation.textType;
