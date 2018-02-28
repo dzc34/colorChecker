@@ -1,12 +1,13 @@
 (function () {
         var body, bodyParent, iframeWidget, iframeContentDocument, iframeBody, highlightedElements, settings,
-            contrastLevelChecker,
+            contrastLevelChecker, autoRefreshCheck,
             contrastCheckerIframeWrapperId = 'contrastCheckerIframeWrapper',
             contrastColorCheckerPort = chrome.runtime.connect({name: 'port-from-cs'}),
             mutationObserverParams = {childList: true, subtree: true},
             defaultDebounceTime = 250,
             defaultSettings = {
-                contrastLevelChecker: 'AA'
+                contrastLevelChecker: 'AA',
+                autoRefreshCheck: 'on'
             };
 
         if (window.hasContrastColorCheckerRun) {
@@ -19,25 +20,11 @@
 
         let bodyMutationEndingObserver, onEndingDOMChangeCallback;
 
-        function replaceAll(str, find, replace) {
-            return str.replace(new RegExp(find, 'g'), replace);
-        }
-
-        onEndingDOMChangeCallback = function (mutations) {
-            var colorContrastWidget = getWidget(),
-                iframeBodyInnerHTML = iframeBody ? replaceAll(iframeBody.innerHTML, ' style="display: none;"', '') : '',
-                contrastCheckerWidgetInnerHTML = '<div id="' + contrastCheckerIframeWrapperId + '">' + replaceAll(colorContrastWidget.innerHTML, ' style="display: none;"', '') + '</div>';
-
-            if (replaceAll(iframeBodyInnerHTML, ' collapsed', '') != replaceAll(contrastCheckerWidgetInnerHTML, ' collapsed', '')) {
-                updateWidget(colorContrastWidget);
-            }
-        };
-        bodyMutationEndingObserver = addMutationObserver(body, mutationObserverParams, debounceFn(onEndingDOMChangeCallback, false));
-
         chrome.runtime.onMessage.addListener((message) => {
             settings = Object.assign({}, defaultSettings, message.settings);
 
             contrastLevelChecker = settings.contrastLevelChecker;
+            autoRefreshCheck = settings.autoRefreshCheck;
 
             let colorContrastWidget,
                 previous = document.getElementById(contrastCheckerIframeWrapperId);
@@ -58,27 +45,46 @@
 
         function getWidget() {
             var tags, elements, validation, colors, elementsByValue, elementsByTag,
-                resultStrings, contrast,
-                fontSize,
-                isValidAA, isValidAAA,
+                resultStrings, isVisible, contrast, fontSize, isValidAA, isValidAAA,
                 sublist, elementItem, counter,
                 rowContent, newRow, rowClass,
                 results = checkAllElementsInDocument(),
-                widgetContent = createElement('div'),
+                widgetContent = createElement('div', {class: contrastLevelChecker}),
                 refreshButton = createElement('button', {content: 'refresh', id: 'refresh'}),
                 closeButton = createElement('button', {content: 'close', id: 'close'}),
                 contrastResults = createTable({
                     headers: [{content: 'Contrast', colspan: 2}, 'Size', 'Elements'],
                     class: 'results AA'
                 }),
+                contrastResultsNoVisible = createTable({
+                    headers: [{content: 'Contrast', colspan: 2}, 'Size', 'Elements'],
+                    class: 'results AA'
+                }),
                 tableBody = contrastResults.querySelector('tbody'),
-                notTested = createElement('ul', {class: 'notTested'});
+                tableNoVisibleBody = contrastResultsNoVisible.querySelector('tbody'),
+                notTested = createElement('ul', {class: 'notTested'}),
+                levelSwitcher = createSwitcher(
+                    [
+                        {content: 'level AA', value: 'AA'},
+                        {content: 'level AAA', value: 'AAA'}
+                    ],
+                    contrastLevelChecker,
+                    switchContrastLevelChecker),
+
+                refreshSwitcher = createSwitcher(
+                    [
+                        {content: 'auto-refresh on', value: 'on'},
+                        {content: 'auto-refresh off', value: 'off'}
+                    ],
+                    autoRefreshCheck,
+                    switchAutoRefresh);
 
             for (resultLabel in results) {
                 rowContent = [];
                 resultStrings = resultLabel.split('-');
-                contrast = resultStrings[0];
-                fontSize = resultStrings[1];
+                isVisible = resultStrings[0] === 'true';
+                contrast = resultStrings[1];
+                fontSize = resultStrings[2];
 
                 elements = results[resultLabel].elements;
                 validation = results[resultLabel].validation;
@@ -131,7 +137,11 @@
                 }
 
                 if (validation) {
-                    tableBody.appendChild(newRow);
+                    if (isVisible) {
+                        tableBody.appendChild(newRow);
+                    } else {
+                        tableNoVisibleBody.appendChild(newRow);
+                    }
                 } else {
                     notTested.appendChild(newRow);
                 }
@@ -142,10 +152,14 @@
 
             widgetContent.appendChild(refreshButton);
             widgetContent.appendChild(closeButton);
+            widgetContent.appendChild(refreshSwitcher);
+            widgetContent.appendChild(levelSwitcher);
             widgetContent.appendChild(contrastResults);
+            widgetContent.appendChild(contrastResultsNoVisible);
             widgetContent.appendChild(notTested);
 
-            sortTable(tableBody, 1)
+            sortTable(tableBody, 1);
+            sortTable(tableNoVisibleBody, 1);
 
             return widgetContent;
 
@@ -193,7 +207,6 @@
             function createTable(config) {
                 var headerCell,
                     tableWrapper = createElement('div'),
-                    levelSwitcher = createSwitcher(switchContrastLevelChecker),
                     table = createElement('table', config.class ? {class: config.class} : {}),
                     thead = createElement('thead'),
                     tbody = createElement('tbody'),
@@ -208,10 +221,7 @@
                 thead.appendChild(headerRow);
                 table.appendChild(thead);
                 table.appendChild(tbody);
-                tableWrapper.appendChild(levelSwitcher);
                 tableWrapper.appendChild(table);
-
-                switchContrastLevelChecker(contrastLevelChecker);
 
                 return tableWrapper;
 
@@ -221,37 +231,57 @@
                     }
                 }
 
-                function switchContrastLevelChecker(classValue) {
-                    table.classList.remove('AA');
-                    table.classList.remove('AAA');
-                    table.classList.add(classValue);
+            }
 
-                    sendMessageToBackgroundScript({
-                        action: 'saveSettings',
-                        settings: {contrastLevelChecker: classValue}
-                    });
+            function switchAutoRefresh(value) {
+                var colorContrastWidget;
+
+                autoRefreshCheck = value;
+
+                if(value === 'on'){
+                    colorContrastWidget = getWidget();
+                    updateWidget(colorContrastWidget);
+                }else{
+                    bodyMutationEndingObserver.disconnect();
                 }
 
-                function createSwitcher(callback) {
-                    var switcher = createElement('select'),
-                        optionAA = createElement('option', {content: 'level AA', value: 'AA'}),
-                        optionAAA = createElement('option', {content: 'level AAA', value: 'AAA'});
+                sendMessageToBackgroundScript({
+                    action: 'saveSettings',
+                    settings: {autoRefreshCheck: value}
+                });
+            }
 
-                    if (contrastLevelChecker === 'AA') {
-                        optionAA.setAttribute('selected', 'selected');
-                    } else {
-                        optionAAA.setAttribute('selected', 'selected');
+            function switchContrastLevelChecker(classValue) {
+                widgetContent.classList.remove('AA');
+                widgetContent.classList.remove('AAA');
+                widgetContent.classList.add(classValue);
+
+                contrastLevelChecker = classValue;
+
+                sendMessageToBackgroundScript({
+                    action: 'saveSettings',
+                    settings: {contrastLevelChecker: classValue}
+                });
+            }
+
+            function createSwitcher(options, value, callback) {
+                var optionElement,
+                    switcher = createElement('select', {value: value});
+
+                options.forEach(function (option) {
+                    optionElement = createElement('option', option);
+                    if(option.value === value){
+                        optionElement.setAttribute('selected', 'selected');
                     }
+                    switcher.appendChild(optionElement);
 
-                    switcher.appendChild(optionAA);
-                    switcher.appendChild(optionAAA);
+                });
 
-                    switcher.onchange = function (event) {
-                        callback(event.target.value);
-                    };
+                switcher.onchange = function (event) {
+                    callback(event.target.value);
+                };
 
-                    return switcher;
-                }
+                return switcher;
             }
         }
 
@@ -287,6 +317,24 @@
 
         function openWidget(widgetContent) {
             iframeWidget = createIframeWidget(widgetContent);
+
+            if (autoRefreshCheck === 'on') {
+                setMutationObserver();
+            }
+        }
+
+        function setMutationObserver() {
+            onEndingDOMChangeCallback = function (mutations) {
+                var colorContrastWidget = getWidget(),
+                    iframeBodyInnerHTML = iframeBody ? replaceAll(iframeBody.innerHTML, ' style="display: none;"', '') : '',
+                    contrastCheckerWidgetInnerHTML = '<div id="' + contrastCheckerIframeWrapperId + '">' + replaceAll(colorContrastWidget.innerHTML, ' style="display: none;"', '') + '</div>';
+
+                if (replaceAll(iframeBodyInnerHTML, ' collapsed', '') != replaceAll(contrastCheckerWidgetInnerHTML, ' collapsed', '')) {
+                    updateWidget(colorContrastWidget);
+                }
+            };
+
+            bodyMutationEndingObserver = addMutationObserver(body, mutationObserverParams, debounceFn(onEndingDOMChangeCallback, false));
         }
 
         function createIframeWidget(widgetContent) {
@@ -331,8 +379,9 @@
         function closeWidget() {
             var widget, widgetParent;
 
-            bodyMutationEndingObserver.disconnect();
-
+            if (bodyMutationEndingObserver) {
+                bodyMutationEndingObserver.disconnect();
+            }
             widget = document.getElementById(contrastCheckerIframeWrapperId);
             widgetParent = widget.parentNode;
 
@@ -348,6 +397,13 @@
 
             iframeBody.appendChild(widgetContent);
             removeHighlightFromElements(highlightedElements)();
+
+            if (bodyMutationEndingObserver) {
+                bodyMutationEndingObserver.disconnect();
+            }
+            if (autoRefreshCheck) {
+                setMutationObserver();
+            }
         }
 
         function createElement(tagName, parameters) {
@@ -502,7 +558,7 @@
                 largeSize = 24,
                 normalSize = 18.6667,
                 backgroundColor = backgroundFromAncestorOrSelf(element),
-                isVisible = backgroundColor && getComputedStyle.getPropertyValue('display') !== 'none' && getComputedStyle.getPropertyValue('visibility') !== 'hidden';
+                isVisible = backgroundColor.isVisible && getComputedStyle.getPropertyValue('display') !== 'none' && getComputedStyle.getPropertyValue('visibility') !== 'hidden';
 
             fontSize = parseInt(getComputedStyle.getPropertyValue('font-size').replace('px', ''));
             fontWeight = getComputedStyle.getPropertyValue('font-weight');
@@ -510,52 +566,50 @@
 
             textType = (fontSize >= largeSize || (fontSize >= normalSize && isBold)) ? 'large' : 'normal';
 
+            foregroundColor = RGBStringToObject(getComputedStyle.getPropertyValue('color'));
+            contrast = getContrastDiff(foregroundColor, backgroundColor);
+
             evaluation = {
                 element: element,
                 fontSize: fontSize,
                 fontWeight: fontWeight,
-                textType: textType
+                textType: textType,
+                foregroundColor: foregroundColor,
+                backgroundColor: backgroundColor,
+                contrast: contrast,
+                isVisible: isVisible
             };
-
-            if (isVisible) {
-                foregroundColor = RGBStringToObject(getComputedStyle.getPropertyValue('color'));
-                contrast = getContrastDiff(foregroundColor, backgroundColor);
-
-                evaluation.foregroundColor = foregroundColor;
-                evaluation.backgroundColor = backgroundColor;
-                evaluation.contrast = contrast;
-                if (textType === 'normal') {
-                    evaluation.isValidAA = contrast >= 4.5;
-                    evaluation.isValidAAA = contrast >= 7;
-                } else {
-                    evaluation.isValidAA = contrast >= 3;
-                    evaluation.isValidAAA = contrast >= 4.5;
-                }
+            if (textType === 'normal') {
+                evaluation.isValidAA = contrast >= 4.5;
+                evaluation.isValidAAA = contrast >= 7;
+            } else {
+                evaluation.isValidAA = contrast >= 3;
+                evaluation.isValidAAA = contrast >= 4.5;
             }
 
             return evaluation;
 
             function backgroundFromAncestorOrSelf(element) {
-                var defaultView = document.defaultView,
+                var RGBBackgroundColorObject,
+                    defaultView = document.defaultView,
                     getComputedStyle = defaultView.getComputedStyle(element, null),
                     backgroundColor = getComputedStyle.getPropertyValue('background-color'),
                     RGBValues = RGBStringToObject(backgroundColor),
                     isTransparent = RGBValues.o === 0,
                     isVisible = getComputedStyle.getPropertyValue('display') !== 'none' && getComputedStyle.getPropertyValue('visibility') !== 'hidden';
 
-                if (!isVisible) {
-                    return false;
-                }
-
                 if (isTransparent || backgroundColor === 'transparent' || !backgroundColor) {
                     if (element.parentNode.tagName.toLowerCase() !== 'body') {
                         return backgroundFromAncestorOrSelf(element.parentNode);
                     } else {
-                        return {r: 255, g: 255, b: 255};
+                        return {r: 255, g: 255, b: 255, isVisible: isVisible};
                     }
                 }
 
-                return RGBStringToObject(backgroundColor);
+                RGBBackgroundColorObject = RGBStringToObject(backgroundColor);
+                RGBBackgroundColorObject.isVisible = isVisible;
+
+                return RGBBackgroundColorObject;
             }
         }
 
@@ -582,7 +636,7 @@
                     colorEvaluation = evaluateColorContrastFromElement(element);
                     tagName = element.tagName.toLowerCase();
                     if (colorEvaluation.contrast) {
-                        identifier = colorEvaluation.contrast + '-' + colorEvaluation.textType;
+                        identifier = colorEvaluation.isVisible + '-' + colorEvaluation.contrast + '-' + colorEvaluation.textType;
 
                         if (!results[identifier]) {
                             results[identifier] = {elements: {}, validation: {}, colors: {}};
@@ -706,6 +760,10 @@
             observer.observe(elementToObserve, config);
 
             return observer;
+        }
+
+        function replaceAll(str, find, replace) {
+            return str.replace(new RegExp(find, 'g'), replace);
         }
 
         function sortTable(table, columnIndex) {

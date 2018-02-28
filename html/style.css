@@ -34,12 +34,12 @@ tbody tr:nth-child(2n) {
     padding-left: 15px;
 }
 
-table.AA tr.validAA .contrast-value,
-table.AAA tr.validAAA .contrast-value {
+.AA tr.validAA .contrast-value,
+.AAA tr.validAAA .contrast-value {
     background: transparent url(icons/ok.png) left top no-repeat;
 }
 
-table.AA tr.invalidAA .contrast-value,
-table.AAA tr.invalidAAA .contrast-value {
+.AA tr.invalidAA .contrast-value,
+.AAA tr.invalidAAA .contrast-value {
     background: transparent url(icons/error.png) left top no-repeat;
 }
