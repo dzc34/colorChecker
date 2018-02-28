@@ -24,23 +24,33 @@ function connected(portFromCS) {
             var openOptionsPage = chrome.runtime.openOptionsPage();
 
             openOptionsPage.then(reportSuccess, reportError);
+        } else if (message.action === 'saveSettings' && message.settings) {
+            chrome.storage.local.set(message.settings);
         }
     });
 }
 
-function sendActionupdateContrastCheckerScript(action) {
+function sendActionToContrastCheckerScript(action) {
     var message = {action: action};
 
-    chrome.tabs
-        .sendMessage(tabId, message);
+    chrome.storage
+        .local.get(['contrastLevelChecker'], sendActionWithSettings);
+
+
+    function sendActionWithSettings(settings) {
+        message.settings = settings;
+
+        chrome.tabs
+            .sendMessage(tabId, message);
+    }
 }
 
 function showContrastChecker() {
-    sendActionupdateContrastCheckerScript('toggle');
+    sendActionToContrastCheckerScript('toggle');
 }
 
 function updateContrastChecker() {
-    sendActionupdateContrastCheckerScript('update');
+    sendActionToContrastCheckerScript('update');
 }
 
 function reportSuccess() {

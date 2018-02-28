@@ -1,9 +1,13 @@
 (function () {
-        var body, bodyParent, iframeWidget, iframeContentDocument, iframeBody, highlightedElements,
+        var body, bodyParent, iframeWidget, iframeContentDocument, iframeBody, highlightedElements, settings,
+            contrastLevelChecker,
             contrastCheckerIframeWrapperId = 'contrastCheckerIframeWrapper',
             contrastColorCheckerPort = chrome.runtime.connect({name: 'port-from-cs'}),
             mutationObserverParams = {childList: true, subtree: true},
-            defaultDebounceTime = 250;
+            defaultDebounceTime = 250,
+            defaultSettings = {
+                contrastLevelChecker: 'AA'
+            };
 
         if (window.hasContrastColorCheckerRun) {
             return;
@@ -31,6 +35,10 @@
         bodyMutationEndingObserver = addMutationObserver(body, mutationObserverParams, debounceFn(onEndingDOMChangeCallback, false));
 
         chrome.runtime.onMessage.addListener((message) => {
+            settings = Object.assign({}, defaultSettings, message.settings);
+
+            contrastLevelChecker = settings.contrastLevelChecker;
+
             let colorContrastWidget,
                 previous = document.getElementById(contrastCheckerIframeWrapperId);
 
@@ -185,7 +193,7 @@
             function createTable(config) {
                 var headerCell,
                     tableWrapper = createElement('div'),
-                    levelSwitcher = createSwitcher(switchTableClass),
+                    levelSwitcher = createSwitcher(switchContrastLevelChecker),
                     table = createElement('table', config.class ? {class: config.class} : {}),
                     thead = createElement('thead'),
                     tbody = createElement('tbody'),
@@ -203,31 +211,43 @@
                 tableWrapper.appendChild(levelSwitcher);
                 tableWrapper.appendChild(table);
 
+                switchContrastLevelChecker(contrastLevelChecker);
+
                 return tableWrapper;
 
-                function sort(table, index){
-                    return function(){
+                function sort(table, index) {
+                    return function () {
                         sortTable(table.querySelectorAll('tbody')[0], index)
                     }
                 }
 
-                function switchTableClass(classValue) {
+                function switchContrastLevelChecker(classValue) {
                     table.classList.remove('AA');
                     table.classList.remove('AAA');
                     table.classList.add(classValue);
-                    console.log(table.classList)
+
+                    sendMessageToBackgroundScript({
+                        action: 'saveSettings',
+                        settings: {contrastLevelChecker: classValue}
+                    });
                 }
 
                 function createSwitcher(callback) {
                     var switcher = createElement('select'),
-                        optionAA = createElement('option', {content: 'level AA', value: 'AA', selected: 'selected'}),
+                        optionAA = createElement('option', {content: 'level AA', value: 'AA'}),
                         optionAAA = createElement('option', {content: 'level AAA', value: 'AAA'});
+
+                    if (contrastLevelChecker === 'AA') {
+                        optionAA.setAttribute('selected', 'selected');
+                    } else {
+                        optionAAA.setAttribute('selected', 'selected');
+                    }
 
                     switcher.appendChild(optionAA);
                     switcher.appendChild(optionAAA);
 
                     switcher.onchange = function (event) {
-                        callback(event.target.value)
+                        callback(event.target.value);
                     };
 
                     return switcher;
@@ -245,19 +265,23 @@
 
         function highlightElements(elements) {
             return function () {
-                highlightedElements = elements;
-                elements.forEach(function (element) {
-                    element.style.outline = '1px solid red';
-                });
+                if (elements) {
+                    highlightedElements = elements;
+                    elements.forEach(function (element) {
+                        element.style.outline = '1px solid red';
+                    });
+                }
             }
         }
 
         function removeHighlightFromElements(elements) {
             return function () {
                 highlightedElements = [];
-                elements.forEach(function (element) {
-                    element.style.outline = '';
-                });
+                if (elements) {
+                    elements.forEach(function (element) {
+                        element.style.outline = '';
+                    });
+                }
             }
         }
 
@@ -305,13 +329,16 @@
         }
 
         function closeWidget() {
-            var widget = document.getElementById(contrastCheckerIframeWrapperId),
-                widgetParent = widget.parentNode;
+            var widget, widgetParent;
+
+            bodyMutationEndingObserver.disconnect();
+
+            widget = document.getElementById(contrastCheckerIframeWrapperId);
+            widgetParent = widget.parentNode;
 
             widgetParent.removeChild(widget);
             widgetParent.removeAttribute('data-contrast-checker-active');
             removeHighlightFromElements(highlightedElements)();
-            bodyMutationEndingObserver();
         }
 
         function updateWidget(widgetContent) {
@@ -678,7 +705,7 @@
             // Start observing the target node for configured mutations
             observer.observe(elementToObserve, config);
 
-            return observer.disconnect;
+            return observer;
         }
 
         function sortTable(table, columnIndex) {
