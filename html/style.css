@@ -1,17 +1,66 @@
+#contrastCheckerWrapper {
+    width: 98%;
+    text-align: left;
+    font-weight: normal;
+    overflow: auto;
+    font-family: Arial, Verdana, sans-serif;
+    font-size: 13px;
+    color: #444;
+    background: #FFF;
+    background-size: 100% 24px;
+    position: relative;
+    padding: 25px 1% 5px;
+}
+#contrastCheckerWrapper:before {
+    content: 'Contrast checker';
+    position: absolute;
+    top: 0;
+    left: 10px;
+    line-height: 30px;
+    font-weight: bold;
+    font-size: 14px;
+}
+
 html, body {
     padding: 0;
     margin: 0;
 }
+
 table {
     width: 100%;
     border-collapse: collapse;
+    font-size: inherit;
+}
+caption {
+    font-weight: bold;
+    margin-top: 15px;
+    margin-bottom: 3px;
+    text-align: left;
+    font-size: 1.1em;
 }
 th, td {
     vertical-align: top;
+    padding: 4px 0;
 }
 
 th {
     text-align: left;
+}
+
+td:first-child {
+    width: 18px;
+}
+
+td.sample {
+    padding: 4px;
+    text-align: center;
+}
+
+td.sample:before {
+    content: '';
+    display: inline-block;
+    border-radius: 6px;
+    border: 6px solid;
 }
 
 tr.expanded ul {
@@ -20,6 +69,28 @@ tr.expanded ul {
 
 tr ul {
     display: none;
+}
+
+table ul,
+table li {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+table li {
+    position: relative;
+    font-weight: normal;
+    font-size: 1em;
+    color: #444;
+    margin: 1px 0;
+    padding: 0 5px 0 25px;
+    background: url(icons/tree_b.gif) 3px top no-repeat;
+    line-height: 1.4;
+}
+
+table li:nth-last-child(1) {
+    background-image: url(icons/tree_c.gif);
 }
 
 thead tr {
@@ -31,15 +102,65 @@ tbody tr:nth-child(2n) {
 }
 
 .contrast-value {
-    padding-left: 15px;
+    padding-left: 20px;
+    font-weight: bold;
 }
 
 .AA tr.validAA .contrast-value,
 .AAA tr.validAAA .contrast-value {
-    background: transparent url(icons/ok.png) left top no-repeat;
+    background: transparent url(icons/ok.png) left 2px no-repeat;
 }
 
 .AA tr.invalidAA .contrast-value,
 .AAA tr.invalidAAA .contrast-value {
-    background: transparent url(icons/error.png) left top no-repeat;
+    background: transparent url(icons/error.png) left 2px no-repeat;
+}
+
+#refresh,
+#closer {
+    position: absolute;
+    border: none;
+    top: 0;
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+    opacity: .6;
+    text-indent: -5000px;
+}
+
+#refresh:hover,
+#refresh:focus,
+#closer:hover,
+#closer:focus {
+    opacity: .9;
+}
+
+#refresh {
+    right: 27px;
+    background: center/contain no-repeat url(./icons/refresh.png);
+}
+
+#closer {
+    right: 2px;
+    background: center/contain no-repeat url(./icons/close.png);
+}
+
+.collapser {
+    display: block;
+    padding: 2px 0 4px 8px;
+    cursor: pointer;
+}
+
+.expanded .collapser {
+    padding: 5px 0 4px 5px;
+    cursor: pointer;
+}
+.collapser:before{
+    content: '';
+    display: inline-block;
+    border: 5px solid;
+    border-color: transparent transparent transparent #000;
+}
+.expanded .collapser:before{
+    border-color: #000 transparent transparent;
 }

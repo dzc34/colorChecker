@@ -2,6 +2,7 @@
     var body, bodyParent, iframeWidget, iframeContentDocument, iframeBody, highlightedElements, settings,
         contrastLevelChecker, autoRefreshCheck,
         contrastCheckerIframeWrapperId = 'contrastCheckerIframeWrapper',
+        contrastCheckerWrapperId = 'contrastCheckerWrapper',
         contrastColorCheckerPort = chrome.runtime.connect({name: 'port-from-cs'}),
         mutationObserverParams = {childList: true, subtree: true},
         defaultDebounceTime = 250,
@@ -49,15 +50,23 @@
             sublist, elementItem, counter,
             rowContent, newRow, rowClass,
             results = checkAllElementsInDocument(),
-            widgetContent = createElement('div', {class: contrastLevelChecker}),
+            widgetContent = createElement('div', {id: contrastCheckerWrapperId, class: contrastLevelChecker}),
             refreshButton = createElement('button', {content: 'refresh', id: 'refresh'}),
-            closeButton = createElement('button', {content: 'close', id: 'close'}),
+            closeButton = createElement('button', {content: 'close', id: 'closer'}),
             contrastResults = createTable({
-                headers: [{content: 'Contrast', colspan: 2}, 'Size', 'Elements'],
+                caption: 'Visible elements',
+                headers: [{content: 'Contrast', colspan: 2}, {content: 'Size', colspan: 2}, {
+                    content: 'Elements',
+                    colspan: 2
+                }],
                 class: 'results AA'
             }),
             contrastResultsNoVisible = createTable({
-                headers: [{content: 'Contrast', colspan: 2}, 'Size', 'Elements'],
+                caption: 'Hidden elements',
+                headers: [{content: 'Contrast', colspan: 2}, {content: 'Size', colspan: 2}, {
+                    content: 'Elements',
+                    colspan: 2
+                }],
                 class: 'results AA'
             }),
             tableBody = contrastResults.querySelector('tbody'),
@@ -70,7 +79,6 @@
                 ],
                 contrastLevelChecker,
                 switchContrastLevelChecker),
-
             refreshSwitcher = createSwitcher(
                 [
                     {content: 'auto-refresh on', value: 'on'},
@@ -107,7 +115,7 @@
                 elementsByValue = elementsByValue.concat(elementsByTag);
                 counter += elementsByTag.length;
 
-                elementItem = createElement('li', {content: tag + ' (' + elementsByTag.length + ')', tabindex: 0});
+                elementItem = createElement('li', {content: elementsByTag.length + ' ' + tag, tabindex: 0});
                 elementItem.addEventListener('focus', highlightElements(elementsByTag));
                 elementItem.addEventListener('blur', removeHighlightFromElements(elementsByTag));
                 sublist.appendChild(elementItem)
@@ -120,9 +128,14 @@
                 rowContent.push(fontSize);
             }
 
-            rowContent.push(counter + ' [' + tags.join(', ') + ']');
+            rowContent.push({
+                content: '',
+                class: 'sample',
+                style: colors ? 'color:' + RGBObjectToString(colors.foregroundColor) + ';background-color:' + RGBObjectToString(colors.backgroundColor) : ''
+            });
+            rowContent.push(counter.toString());
+            rowContent.push(tags.join(', '));
 
-//                itemStyle = colors ? 'color:' + RGBObjectToString(colors.foregroundColor) + ';background-color:' + RGBObjectToString(colors.backgroundColor) : '';
 
             if (sublist.childNodes.length > 1) {
                 rowContent._ezpandable = true;
@@ -164,14 +177,14 @@
         return widgetContent;
 
         function createRow(contentArray, parameters) {
-            var toggleButton, cell,
+            var collapser, cell,
                 row = createElement('tr');
 
             if (contentArray._ezpandable) {
-                toggleButton = createElement('button', {content: '+', class: 'show-tags'});
-                toggleButton.onclick = toggle(row);
+                collapser = createElement('span', {class: 'collapser'});
+                collapser.addEventListener('click', toggle(row));
                 cell = createElement('td');
-                cell.appendChild(toggleButton);
+                cell.appendChild(collapser);
                 row.appendChild(cell);
             } else {
                 row.appendChild(createElement('td'));
@@ -182,9 +195,10 @@
                     cell = createElement('td', {content: cellContent});
                     row.appendChild(cell);
                 } else {
-                    cell = createElement('td', {content: cellContent.content});
-                    cell.setAttribute('class', cellContent.class);
-                    row.setAttribute('class', cellContent.rowClass);
+                    cell = createElement('td', cellContent);
+                    if (cellContent.rowClass) {
+                        row.setAttribute('class', cellContent.rowClass);
+                    }
                     row.appendChild(cell);
                 }
             });
@@ -198,7 +212,7 @@
             return row;
 
             function toggle(row) {
-                return function () {
+                return function (event) {
                     row.classList.toggle('expanded');
                 }
             }
@@ -208,6 +222,7 @@
             var headerCell,
                 tableWrapper = createElement('div'),
                 table = createElement('table', config.class ? {class: config.class} : {}),
+                caption = createElement('caption', {content: config.caption || ''}),
                 thead = createElement('thead'),
                 tbody = createElement('tbody'),
                 headerRow = createElement('tr');
@@ -217,6 +232,10 @@
                 headerCell.onclick = sort(table, index)
                 headerRow.appendChild(headerCell);
             });
+
+            if (config.caption) {
+                table.appendChild(caption);
+            }
 
             thead.appendChild(headerRow);
             table.appendChild(thead);
@@ -298,7 +317,14 @@
             if (elements) {
                 highlightedElements = elements;
                 elements.forEach(function (element) {
-                    element.style.outline = '1px solid red';
+                    if (element.parentNode) {
+                        element.parentNode.insertBefore(createElement('span', {
+                            class: 'visualHelper', style: 'display: inline-block; position: absolute;' +
+                            'border: 10px solid; border-color: transparent transparent transparent red; ' +
+                            'margin-left: -10px; margin-top: -10px; transform: rotate(45deg)'
+                        }), element);
+                        element.style.boxShadow = 'inset 0 0 0 1px #F00';
+                    }
                 });
             }
         }
@@ -307,9 +333,15 @@
     function removeHighlightFromElements(elements) {
         return function () {
             highlightedElements = [];
+            var visualHelpers = document.querySelectorAll('.visualHelper');
+
+            for (var i = visualHelpers.length - 1; i >= 0; i--) {
+                visualHelpers[i].parentNode.removeChild(visualHelpers[i]);
+            }
+
             if (elements) {
                 elements.forEach(function (element) {
-                    element.style.outline = '';
+                    element.style.boxShadow = '';
                 });
             }
         }
@@ -325,6 +357,10 @@
 
     function setMutationObserver() {
         onEndingDOMChangeCallback = function (mutations) {
+            if ((mutations[0].addedNodes.length && mutations[0].addedNodes[0].classList.contains('visualHelper')) || (mutations[0].removedNodes.length && mutations[0].removedNodes[0].classList.contains('visualHelper'))) {
+                return;
+            }
+
             var colorContrastWidget = getWidget(),
                 iframeBodyInnerHTML = iframeBody ? replaceAll(iframeBody.innerHTML, ' style="display: none;"', '') : '',
                 contrastCheckerWidgetInnerHTML = '<div id="' + contrastCheckerIframeWrapperId + '">' + replaceAll(colorContrastWidget.innerHTML, ' style="display: none;"', '') + '</div>';
@@ -472,13 +508,13 @@
             largeSize = 24,
             normalSize = 18.6667,
             backgroundColor = backgroundFromSelfOrAncestor(element),
-            isVisible = backgroundColor.isVisible && getComputedStyle.getPropertyValue('display') !== 'none' && getComputedStyle.getPropertyValue('visibility') !== 'hidden';
+            isVisible = backgroundColor.isVisible && isElementVisible(element);
 
         fontSize = parseInt(getComputedStyle.getPropertyValue('font-size').replace('px', ''));
         fontWeight = getComputedStyle.getPropertyValue('font-weight');
         isBold = parseInt(fontWeight) >= 700 || fontWeight === 'bold' || fontWeight == 'bolder';
 
-        textType = (fontSize >= largeSize || (fontSize >= normalSize && isBold)) ? 'large' : 'normal';
+        textType = (fontSize >= largeSize || (fontSize >= normalSize && isBold)) ? 'L' : 'N';
 
         foregroundColor = RGBStringToObject(getComputedStyle.getPropertyValue('color'));
         if (foregroundColor.o > 0 && foregroundColor.o < 1) {
@@ -497,7 +533,7 @@
             contrast: contrast,
             isVisible: isVisible
         };
-        if (textType === 'normal') {
+        if (textType === 'N') {
             evaluation.isValidAA = contrast >= 4.5;
             evaluation.isValidAAA = contrast >= 7;
         } else {
@@ -516,7 +552,7 @@
             RGBValues = RGBStringToObject(backgroundColor),
             alpha = RGBValues.o,
             isTransparent = alpha === 0,
-            isVisible = getComputedStyle.getPropertyValue('display') !== 'none' && getComputedStyle.getPropertyValue('visibility') !== 'hidden';
+            isVisible = isElementVisible(element);
 
         if (isTransparent || backgroundColor === 'transparent' || !backgroundColor) {
             if (element.parentNode.tagName.toLowerCase() !== 'body') {
@@ -748,6 +784,27 @@
         }
 
         return text.replace(/\n/g, ' ').replace(/\t/g, ' ').replace(/\s+/gi, ' ');
+    }
+
+    function isElementVisible(element) {
+        var getComputedStyle = document.defaultView.getComputedStyle(element, null),
+            isVisible = getComputedStyle.getPropertyValue('display') !== 'none' && getComputedStyle.getPropertyValue('visibility') !== 'hidden' && isVisibleByPosition(getComputedStyle);
+
+        if (isVisible && element.parentNode.tagName.toLowerCase() !== 'body') {
+            isVisible = isElementVisible(element.parentNode);
+        }
+
+        return isVisible;
+
+        function isVisibleByPosition(getComputedStyle) {
+            var position = getComputedStyle.getPropertyValue('position'),
+                isPositioned = position === 'relative' || position === 'absolute',
+                top = getComputedStyle.getPropertyValue('top').replace('px',''),
+                left = getComputedStyle.getPropertyValue('left').replace('px',''),
+                zIndex = getComputedStyle.getPropertyValue('z-index');
+
+            return !(isPositioned && ((top.indexOf('-') === 0 && parseInt(top) < -1000) || (left.indexOf('-') === 0 && parseInt(left) < -1000) || zIndex.indexOf('-') === 0));
+        }
     }
 
     function isTextNode(node) {
