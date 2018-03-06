@@ -1,9 +1,9 @@
 {
   "name": "WCAG Contrast checker",
-  "description": "To test the color under WCAG accessibility requirements",
+  "description": "To test the color contrast according to WCAG accessibility requirements",
   "author": "Rumoroso",
   "manifest_version": 2,
-  "version": "2.0.0",
+  "version": "3.0.0",
   "background": {
     "scripts": [
       "background.js"
@@ -32,7 +32,7 @@
   },
   "applications": {
     "gecko": {
-      "id": "colorchecker@colorcheckerniquelao.net",
+      "id": "wcagcontrastchecker@colorcheckerniquelao.net",
       "strict_min_version": "58.0a1"
     }
   }

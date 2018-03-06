@@ -294,6 +294,8 @@ tbody tr:focus {
 
 .color-tool input[type=color] {
     width: 20%;
+    padding: 0;
+    border: none;
 }
 
 .color-tools #exampleText {
