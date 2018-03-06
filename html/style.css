@@ -1,5 +1,4 @@
-#contrastCheckerWrapper {
-    width: 98%;
+body {
     text-align: left;
     font-weight: normal;
     overflow: auto;
@@ -7,11 +6,9 @@
     font-size: 13px;
     color: #444;
     background: #FFF;
-    background-size: 100% 24px;
     position: relative;
-    padding: 25px 1% 5px;
 }
-#contrastCheckerWrapper:before {
+body:before {
     content: 'Contrast checker';
     position: absolute;
     top: 0;
@@ -19,6 +16,11 @@
     line-height: 30px;
     font-weight: bold;
     font-size: 14px;
+}
+
+#contrastCheckerWrapper {
+    width: 98%;
+    padding: 5px 1%;
 }
 
 html, body {
@@ -46,7 +48,9 @@ th, td {
 th {
     text-align: left;
 }
-
+.results-container tbody tr {
+    cursor: pointer;
+}
 td:first-child {
     width: 18px;
 }
@@ -116,11 +120,15 @@ tbody tr:nth-child(2n) {
     background: transparent url(icons/error.png) left 2px no-repeat;
 }
 
+.navigation-bar {
+    text-align: right;
+}
+
 #refresh,
 #closer {
-    position: absolute;
+    display: inline-block;
+    margin: 2px;
     border: none;
-    top: 0;
     width: 20px;
     height: 20px;
     cursor: pointer;
@@ -136,12 +144,10 @@ tbody tr:nth-child(2n) {
 }
 
 #refresh {
-    right: 27px;
     background: center/contain no-repeat url(./icons/refresh.png);
 }
 
 #closer {
-    right: 2px;
     background: center/contain no-repeat url(./icons/close.png);
 }
 
@@ -163,4 +169,36 @@ tbody tr:nth-child(2n) {
 }
 .expanded .collapser:before{
     border-color: #000 transparent transparent;
+}
+
+.color-tools {
+    width: 100%;
+}
+
+.color-tool {
+    float: left;
+    width: 50%;
+}
+
+.color-tool label{
+    display: block;
+}
+
+.color-tool input{
+    height: 25px;
+    vertical-align: middle;
+}
+
+.color-tool input[type=text]{
+    width: 80%;
+}
+
+.color-tool input[type=color]{
+    width: 20%;
+}
+.color-tools #exampleText {
+    clear: both;
+    text-align: center;
+    font-size: 20px;
+    padding: 10px;
 }

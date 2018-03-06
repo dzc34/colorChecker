@@ -1,6 +1,7 @@
 (function () {
     var body, bodyParent, iframeWidget, iframeContentDocument, iframeBody, highlightedElements, settings,
         contrastLevelChecker, autoRefreshCheck,
+        navigationBar, selectorBar,
         contrastCheckerIframeWrapperId = 'contrastCheckerIframeWrapper',
         contrastCheckerWrapperId = 'contrastCheckerWrapper',
         contrastColorCheckerPort = chrome.runtime.connect({name: 'port-from-cs'}),
@@ -10,6 +11,22 @@
             contrastLevelChecker: 'AA',
             autoRefreshCheck: 'on'
         };
+    var KEYS = {
+        BACKSPACE: 8,
+        TAB: 9,
+        ENTER: 13,
+        ESCAPE: 27,
+        SPACE: 32,
+        PAGE_UP: 33,
+        PAGE_DOWN: 34,
+        END: 35,
+        HOME: 36,
+        LEFT_ARROW: 37,
+        UP_ARROW: 38,
+        RIGHT_ARROW: 39,
+        DOWN_ARROW: 40,
+        DELETE: 46
+    };
 
     if (window.hasContrastColorCheckerRun) {
         return;
@@ -50,10 +67,8 @@
             sublist, elementItem, counter,
             rowContent, newRow, rowClass,
             results = checkAllElementsInDocument(),
-            widgetContent = createElement('div', {id: contrastCheckerWrapperId, class: contrastLevelChecker}),
-            refreshButton = createElement('button', {content: 'refresh', id: 'refresh'}),
-            closeButton = createElement('button', {content: 'close', id: 'closer'}),
-            contrastResults = createTable({
+            widgetContent = createElement('div'),
+            contrastResults = createResultsContainer({
                 caption: 'Visible elements',
                 headers: [{content: 'Contrast', colspan: 2}, {content: 'Size', colspan: 2}, {
                     content: 'Elements',
@@ -61,7 +76,7 @@
                 }],
                 class: 'results AA'
             }),
-            contrastResultsNoVisible = createTable({
+            contrastResultsNoVisible = createResultsContainer({
                 caption: 'Hidden elements',
                 headers: [{content: 'Contrast', colspan: 2}, {content: 'Size', colspan: 2}, {
                     content: 'Elements',
@@ -70,22 +85,7 @@
                 class: 'results AA'
             }),
             tableBody = contrastResults.querySelector('tbody'),
-            tableNoVisibleBody = contrastResultsNoVisible.querySelector('tbody'),
-            notTested = createElement('ul', {class: 'notTested'}),
-            levelSwitcher = createSwitcher(
-                [
-                    {content: 'level AA', value: 'AA'},
-                    {content: 'level AAA', value: 'AAA'}
-                ],
-                contrastLevelChecker,
-                switchContrastLevelChecker),
-            refreshSwitcher = createSwitcher(
-                [
-                    {content: 'auto-refresh on', value: 'on'},
-                    {content: 'auto-refresh off', value: 'off'}
-                ],
-                autoRefreshCheck,
-                switchAutoRefresh);
+            tableNoVisibleBody = contrastResultsNoVisible.querySelector('tbody');
 
         for (resultLabel in results) {
             rowContent = [];
@@ -116,7 +116,7 @@
                 counter += elementsByTag.length;
 
                 elementItem = createElement('li', {content: elementsByTag.length + ' ' + tag, tabindex: 0});
-                elementItem.addEventListener('focus', highlightElements(elementsByTag));
+                elementItem.addEventListener('focus', highlightElements(elementsByTag, RGBToHex(colors.foregroundColor), RGBToHex(colors.backgroundColor)));
                 elementItem.addEventListener('blur', removeHighlightFromElements(elementsByTag));
                 sublist.appendChild(elementItem)
             }
@@ -142,34 +142,21 @@
             }
 
             newRow = createRow(rowContent, {tabindex: 0});
-            newRow.addEventListener('focus', highlightElements(elementsByValue));
+            newRow.addEventListener('focus', highlightElements(elementsByValue, RGBToHex(colors.foregroundColor), RGBToHex(colors.backgroundColor)));
             newRow.addEventListener('blur', removeHighlightFromElements(elementsByValue));
 
             if (sublist.childNodes.length > 1) {
                 newRow.querySelectorAll('td:last-child')[0].appendChild(sublist)
             }
 
-            if (validation) {
-                if (isVisible) {
-                    tableBody.appendChild(newRow);
-                } else {
-                    tableNoVisibleBody.appendChild(newRow);
-                }
+            if (isVisible) {
+                tableBody.appendChild(newRow);
             } else {
-                notTested.appendChild(newRow);
+                tableNoVisibleBody.appendChild(newRow);
             }
         }
-
-        refreshButton.onclick = refreshWidget;
-        closeButton.onclick = closeWidget;
-
-        widgetContent.appendChild(refreshButton);
-        widgetContent.appendChild(closeButton);
-        widgetContent.appendChild(refreshSwitcher);
-        widgetContent.appendChild(levelSwitcher);
         widgetContent.appendChild(contrastResults);
         widgetContent.appendChild(contrastResultsNoVisible);
-        widgetContent.appendChild(notTested);
 
         sortTable(tableBody, 1);
         sortTable(tableNoVisibleBody, 1);
@@ -186,6 +173,7 @@
                 cell = createElement('td');
                 cell.appendChild(collapser);
                 row.appendChild(cell);
+                row.classList.add('expandable');
             } else {
                 row.appendChild(createElement('td'));
             }
@@ -197,7 +185,9 @@
                 } else {
                     cell = createElement('td', cellContent);
                     if (cellContent.rowClass) {
-                        row.setAttribute('class', cellContent.rowClass);
+                        cellContent.rowClass.split(' ').forEach(function (rowClass) {
+                            row.classList.add(rowClass);
+                        });
                     }
                     row.appendChild(cell);
                 }
@@ -209,7 +199,31 @@
                 }
             }
 
+            row.onkeydown = keyboardHandler;
+
             return row;
+
+            function keyboardHandler(event) {
+                var keyCode = event.which,
+                    row = event.target;
+
+                while (row.tagName.toLowerCase() !== 'tr') {
+                    row = target.parentNode;
+                }
+
+                if (keyCode === KEYS.DOWN_ARROW && row.nextSibling) {
+                    row.nextSibling.focus();
+                } else if (keyCode === KEYS.UP_ARROW && row.previousSibling) {
+                    row.previousSibling.focus();
+                } else if (keyCode === KEYS.ENTER && row.classList.contains('expandable')) {
+                    row.classList.toggle('expanded');
+                }
+
+
+                if (keyCode === KEYS.DOWN_ARROW || keyCode === KEYS.UP_ARROW) {
+                    event.preventDefault();
+                }
+            }
 
             function toggle(row) {
                 return function (event) {
@@ -218,9 +232,9 @@
             }
         }
 
-        function createTable(config) {
+        function createResultsContainer(config) {
             var headerCell,
-                tableWrapper = createElement('div'),
+                tableWrapper = createElement('div', {class: 'results-container'}),
                 table = createElement('table', config.class ? {class: config.class} : {}),
                 caption = createElement('caption', {content: config.caption || ''}),
                 thead = createElement('thead'),
@@ -229,7 +243,7 @@
 
             config.headers.forEach(function (header, index) {
                 headerCell = createElement('th', typeof header === 'string' ? {content: header} : header);
-                headerCell.onclick = sort(table, index)
+                headerCell.onclick = sort(table, index);
                 headerRow.appendChild(headerCell);
             });
 
@@ -240,6 +254,7 @@
             thead.appendChild(headerRow);
             table.appendChild(thead);
             table.appendChild(tbody);
+
             tableWrapper.appendChild(table);
 
             return tableWrapper;
@@ -249,58 +264,6 @@
                     sortTable(table.querySelectorAll('tbody')[0], index)
                 }
             }
-
-        }
-
-        function switchAutoRefresh(value) {
-            var colorContrastWidget;
-
-            autoRefreshCheck = value;
-
-            if (value === 'on') {
-                colorContrastWidget = getWidget();
-                updateWidget(colorContrastWidget);
-            } else {
-                bodyMutationEndingObserver.disconnect();
-            }
-
-            sendMessageToBackgroundScript({
-                action: 'saveSettings',
-                settings: {autoRefreshCheck: value}
-            });
-        }
-
-        function switchContrastLevelChecker(classValue) {
-            widgetContent.classList.remove('AA');
-            widgetContent.classList.remove('AAA');
-            widgetContent.classList.add(classValue);
-
-            contrastLevelChecker = classValue;
-
-            sendMessageToBackgroundScript({
-                action: 'saveSettings',
-                settings: {contrastLevelChecker: classValue}
-            });
-        }
-
-        function createSwitcher(options, value, callback) {
-            var optionElement,
-                switcher = createElement('select', {value: value});
-
-            options.forEach(function (option) {
-                optionElement = createElement('option', option);
-                if (option.value === value) {
-                    optionElement.setAttribute('selected', 'selected');
-                }
-                switcher.appendChild(optionElement);
-
-            });
-
-            switcher.onchange = function (event) {
-                callback(event.target.value);
-            };
-
-            return switcher;
         }
     }
 
@@ -312,7 +275,7 @@
         contrastColorCheckerPort.postMessage(messageObject);
     }
 
-    function highlightElements(elements) {
+    function highlightElements(elements, foreground, background) {
         return function () {
             if (elements) {
                 highlightedElements = elements;
@@ -326,6 +289,13 @@
                         element.style.boxShadow = 'inset 0 0 0 1px #F00';
                     }
                 });
+                iframeContentDocument.getElementById('foreground').value = foreground;
+                iframeContentDocument.getElementById('foreground-selector').value = foreground;
+                iframeContentDocument.getElementById('exampleText').style.color = foreground;
+
+                iframeContentDocument.getElementById('background').value = background;
+                iframeContentDocument.getElementById('background-selector').value = background;
+                iframeContentDocument.getElementById('exampleText').style.backgroundColor = background;
             }
         }
     }
@@ -393,13 +363,26 @@
         xmlhttp.onload = function (e) {
             if (xmlhttp.readyState === 4) {
                 if (xmlhttp.status === 200) {
+                    var widgetWrapper = createElement('div', {
+                            id: contrastCheckerWrapperId,
+                            class: contrastLevelChecker
+                        }),
+                        colorTools = createColorTools();
+
+                    navigationBar = createWidgetControlButtons();
+                    selectorBar = createSelectorBar();
+
                     iframeCSS = xmlhttp.responseText;
 
                     iframeHead = '<base href="' + baseURL + '" /><style>' + iframeCSS + '</style>';
 
                     iframeContentDocument.head.innerHTML = iframeHead;
 
-                    iframeBody.appendChild(widgetContent);
+                    iframeBody.appendChild(navigationBar);
+                    widgetWrapper.appendChild(widgetContent);
+                    iframeBody.appendChild(widgetWrapper);
+                    iframeBody.appendChild(selectorBar);
+                    iframeBody.appendChild(colorTools);
 
                     return iframeWidget;
                 } else {
@@ -427,11 +410,13 @@
     }
 
     function updateWidget(widgetContent) {
-        while (iframeBody.firstChild) {
-            iframeBody.removeChild(iframeBody.firstChild);
+        var contrastCheckerWrapper = iframeContentDocument.getElementById(contrastCheckerWrapperId);
+
+        while (contrastCheckerWrapper.firstChild) {
+            contrastCheckerWrapper.removeChild(contrastCheckerWrapper.firstChild);
         }
 
-        iframeBody.appendChild(widgetContent);
+        contrastCheckerWrapper.appendChild(widgetContent);
         removeHighlightFromElements(highlightedElements)();
 
         if (bodyMutationEndingObserver) {
@@ -458,6 +443,144 @@
         }
 
         return newElement
+    }
+
+    function createWidgetControlButtons() {
+        var navigationBar = createElement('div', {class: 'navigation-bar'}),
+            refreshButton = createElement('button', {content: 'refresh', id: 'refresh'}),
+            closeButton = createElement('button', {content: 'close', id: 'closer'});
+
+        refreshButton.onclick = refreshWidget;
+        closeButton.onclick = closeWidget;
+
+        navigationBar.appendChild(refreshButton);
+        navigationBar.appendChild(closeButton);
+
+        return navigationBar;
+    }
+
+    function createSelectorBar() {
+        var selectorBar = createElement('div', {class: 'selector-bar'}),
+            levelSwitcher = createSwitcher(
+                [
+                    {content: 'level AA', value: 'AA'},
+                    {content: 'level AAA', value: 'AAA'}
+                ],
+                contrastLevelChecker,
+                switchContrastLevelChecker),
+            refreshSwitcher = createSwitcher(
+                [
+                    {content: 'auto-refresh on', value: 'on'},
+                    {content: 'auto-refresh off', value: 'off'}
+                ],
+                autoRefreshCheck,
+                switchAutoRefresh);
+
+        selectorBar.appendChild(refreshSwitcher);
+        selectorBar.appendChild(levelSwitcher);
+
+        return selectorBar;
+
+        function switchAutoRefresh(value) {
+            var colorContrastWidget;
+
+            autoRefreshCheck = value;
+
+            if (value === 'on') {
+                colorContrastWidget = getWidget();
+                updateWidget(colorContrastWidget);
+            } else {
+                bodyMutationEndingObserver.disconnect();
+            }
+
+            sendMessageToBackgroundScript({
+                action: 'saveSettings',
+                settings: {autoRefreshCheck: value}
+            });
+        }
+
+        function switchContrastLevelChecker(classValue) {
+            var contrastCheckerWrapper = iframeContentDocument.getElementById(contrastCheckerWrapperId);
+
+            contrastCheckerWrapper.classList.remove('AA');
+            contrastCheckerWrapper.classList.remove('AAA');
+            contrastCheckerWrapper.classList.add(classValue);
+
+            contrastLevelChecker = classValue;
+
+            sendMessageToBackgroundScript({
+                action: 'saveSettings',
+                settings: {contrastLevelChecker: classValue}
+            });
+        }
+    }
+
+    function createColorTools() {
+        var colorTools = createElement('div', {class: 'color-tools'}),
+            foregroundInput = createInputForColor('Foreground color', 'foreground', '#000000'),
+            backgroundInput = createInputForColor('Background color', 'background', '#FFFFFF'),
+            exampleText = createElement('div', {
+                content: 'Example text',
+                id: 'exampleText',
+                style: 'color: #000000; background-color: #FFFFFF'
+            });
+
+        colorTools.appendChild(foregroundInput);
+        colorTools.appendChild(backgroundInput);
+        colorTools.appendChild(exampleText);
+
+        return colorTools;
+
+        function createInputForColor(label, inputId, defaultColor) {
+            var wrapper = createElement('div', {class: 'color-tool'}),
+                inputLabel = createElement('label', {for: inputId, content: label}),
+                inputField = createElement('input', {id: inputId, type: 'text', value: defaultColor}),
+                colorSelector = createElement('input', {id: inputId + '-selector', type: 'color', value: defaultColor});
+
+            inputField.onchange = function () {
+                colorSelector.value = hexShorthandToExtended(this.value);
+                if (inputId === 'foreground') {
+                    iframeContentDocument.getElementById('exampleText').style.color = this.value;
+                } else {
+                    iframeContentDocument.getElementById('exampleText').style.backgroundColor = this.value;
+                }
+            };
+
+            colorSelector.onchange = function () {
+                colorSelector.value = this.value;
+                if (inputId === 'foreground') {
+                    iframeContentDocument.getElementById('exampleText').style.color = this.value;
+                } else {
+                    iframeContentDocument.getElementById('exampleText').style.backgroundColor = this.value;
+                }
+            };
+
+            wrapper.appendChild(inputLabel);
+            wrapper.appendChild(inputField);
+            wrapper.appendChild(colorSelector);
+
+            return wrapper;
+        }
+    }
+
+    function createSwitcher(options, value, callback) {
+        var optionElement,
+            switcher = createElement('select', {value: value});
+
+        options.forEach(function (option) {
+            optionElement = createElement('option', option);
+            if (option.value === value) {
+                optionElement.setAttribute('selected', 'selected');
+            }
+            switcher.appendChild(optionElement);
+
+        });
+
+        switcher.onchange = function (event) {
+            callback(event.target.value);
+        };
+
+        return switcher;
     }
 
     function getContrastDiff(foreground, background) {
@@ -738,11 +861,8 @@
         return '#' + decToHex(RGBValues.r) + decToHex(RGBValues.g) + decToHex(RGBValues.b);
     }
 
-    function RGBStringToHex(originId, destId) {
-        var originalValue = document.getElementById(originId).value,
-            RGBValues = RGBStringToObject(originalValue);
-
-        document.getElementById(destId).value = '#' + decToHex(RGBValues.r) + decToHex(RGBValues.g) + decToHex(RGBValues.b);
+    function RGBToHex(RGBColor) {
+        return '#' + decToHex(RGBColor.r) + decToHex(RGBColor.g) + decToHex(RGBColor.b);
     }
 
     function getValue(input) {
@@ -799,8 +919,8 @@
         function isVisibleByPosition(getComputedStyle) {
             var position = getComputedStyle.getPropertyValue('position'),
                 isPositioned = position === 'relative' || position === 'absolute',
-                top = getComputedStyle.getPropertyValue('top').replace('px',''),
-                left = getComputedStyle.getPropertyValue('left').replace('px',''),
+                top = getComputedStyle.getPropertyValue('top').replace('px', ''),
+                left = getComputedStyle.getPropertyValue('left').replace('px', ''),
                 zIndex = getComputedStyle.getPropertyValue('z-index');
 
             return !(isPositioned && ((top.indexOf('-') === 0 && parseInt(top) < -1000) || (left.indexOf('-') === 0 && parseInt(left) < -1000) || zIndex.indexOf('-') === 0));
