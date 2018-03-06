@@ -8,6 +8,7 @@
 * Show fields for rgb color
 * Color picker for selecting color in the page
 * Improve general styling
+* Different color-blind evaluations
 * Integrate in developer tools and/or as sidebar panel
 
 Any comments and suggestions are welcome ...
