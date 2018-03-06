@@ -10,23 +10,15 @@
         defaultSettings = {
             contrastLevelChecker: 'AA',
             autoRefreshCheck: 'on'
+        },
+        defaultForegroundColor = '#000000',
+        defaultBackgroundColor = '#FFFFFF',
+        KEYS = {
+            ENTER: 13,
+            SPACE: 32,
+            UP_ARROW: 38,
+            DOWN_ARROW: 40
         };
-    var KEYS = {
-        BACKSPACE: 8,
-        TAB: 9,
-        ENTER: 13,
-        ESCAPE: 27,
-        SPACE: 32,
-        PAGE_UP: 33,
-        PAGE_DOWN: 34,
-        END: 35,
-        HOME: 36,
-        LEFT_ARROW: 37,
-        UP_ARROW: 38,
-        RIGHT_ARROW: 39,
-        DOWN_ARROW: 40,
-        DELETE: 46
-    };
 
     if (window.hasContrastColorCheckerRun) {
         return;
@@ -383,10 +375,10 @@
         }
 
         contrast = getContrastDiff(hexToRGB(foregroundColor), hexToRGB(backgroundColor));
-        smallAA = iframeContentDocument.querySelectorAll('.single-validation-AA .single-validation-small')[0];
-        largeAA = iframeContentDocument.querySelectorAll('.single-validation-AA .single-validation-large')[0];
-        smallAAA = iframeContentDocument.querySelectorAll('.single-validation-AAA .single-validation-small')[0];
-        largeAAA = iframeContentDocument.querySelectorAll('.single-validation-AAA .single-validation-large')[0];
+        smallAA = iframeContentDocument.querySelectorAll('.single-validation-AA-small')[0];
+        largeAA = iframeContentDocument.querySelectorAll('.single-validation-AA-large')[0];
+        smallAAA = iframeContentDocument.querySelectorAll('.single-validation-AAA-small')[0];
+        largeAAA = iframeContentDocument.querySelectorAll('.single-validation-AAA-large')[0];
 
         iframeContentDocument.querySelectorAll('.single-validation-contrast').forEach(function (element) {
             element.innerHTML = contrast;
@@ -583,32 +575,37 @@
 
     function createColorTools() {
         var colorTools = createElement('div', {class: 'color-tools'}),
+            toolsHeader = createElement('h2', {content: 'Checker tool'}),
             inputWrapper = createElement('div', {class: 'color-input'}),
-            foregroundInput = createInputForColor('Foreground color (hex.)', 'foreground', '#000000'),
-            backgroundInput = createInputForColor('Background color (hex.)', 'background', '#FFFFFF'),
+            foregroundInput = createInputForColor('Foreground color (hex.)', 'foreground', defaultForegroundColor),
+            backgroundInput = createInputForColor('Background color (hex.)', 'background', defaultBackgroundColor),
             exampleText = createElement('div', {
                 content: 'Example text',
                 id: 'exampleText',
-                style: 'color: #000000; background-color: #FFFFFF'
+                style: 'color: ' + defaultForegroundColor + '; background-color: ' + defaultBackgroundColor
             }),
             validationTable = createTable(
                 {
-                    headers: ['Contrast', 'Level', 'small', 'large'],
+                    headers: ['Size', 'Contrast', 'AA', 'AAA'],
                     class: 'single-validation'
                 }),
             tableBody = validationTable.querySelector('tbody'),
-            rowAA = createRow([{content: 'AA', class: 'single-validation-level'}, {
-                class: 'single-validation-contrast',
-                content: '21'
-            }, {class: 'single-validation-small valid'}, {class: 'single-validation-large valid'}], {class: 'single-validation-AA'}),
-            rowAAA = createRow([{
-                content: 'AAA',
-                class: 'single-validation-level'
-            }, {
-                class: 'single-validation-contrast',
-                content: '21'
-            }, {class: 'single-validation-small valid'}, {class: 'single-validation-large valid'}], {class: 'single-validation-AAA'});
+            rowAA = createRow([
+                    {content: 'small', class: 'single-validation-size'},
+                    {class: 'single-validation-contrast', content: '21'},
+                    {class: 'single-validation-AA-small valid'},
+                    {class: 'single-validation-AAA-small valid'}
+                ]
+            ),
+            rowAAA = createRow([
+                    {content: 'Large', class: 'single-validation-size'},
+                    {class: 'single-validation-contrast', content: '21'},
+                    {class: 'single-validation-AA-large valid'},
+                    {class: 'single-validation-AAA-large valid'}
+                ]
+            );
 
+        colorTools.appendChild(toolsHeader);
         inputWrapper.appendChild(foregroundInput);
         inputWrapper.appendChild(backgroundInput);
         colorTools.appendChild(inputWrapper);

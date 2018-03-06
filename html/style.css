@@ -138,15 +138,19 @@ tbody tr:focus{
 
 .AA tr.validAA .contrast-value,
 .AAA tr.validAAA .contrast-value,
-.single-validation .single-validation-small.valid,
-.single-validation .single-validation-large.valid{
+.single-validation .single-validation-AA-small.valid,
+.single-validation .single-validation-AA-large.valid,
+.single-validation .single-validation-AAA-small.valid,
+.single-validation .single-validation-AAA-large.valid{
     background: transparent url(icons/ok.png) left 3px no-repeat;
 }
 
 .AA tr.invalidAA .contrast-value,
 .AAA tr.invalidAAA .contrast-value,
-.single-validation .single-validation-small,
-.single-validation .single-validation-large{
+.single-validation .single-validation-AA-small,
+.single-validation .single-validation-AA-large,
+.single-validation .single-validation-AAA-small,
+.single-validation .single-validation-AAA-large{
     background: transparent url(icons/error.png) left 3px no-repeat;
 }
 
