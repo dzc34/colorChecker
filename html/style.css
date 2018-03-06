@@ -8,11 +8,12 @@ body {
     background: #FFF;
     position: relative;
 }
+
 body:before {
-    content: 'Contrast checker';
+    content: 'WCAG 2.0 - Contrast checker';
     position: absolute;
     top: 0;
-    left: 10px;
+    left: 1%;
     line-height: 30px;
     font-weight: bold;
     font-size: 14px;
@@ -33,6 +34,7 @@ table {
     border-collapse: collapse;
     font-size: inherit;
 }
+
 caption {
     font-weight: bold;
     margin-top: 15px;
@@ -40,6 +42,7 @@ caption {
     text-align: left;
     font-size: 1.1em;
 }
+
 th, td {
     vertical-align: top;
     padding: 4px 0;
@@ -47,16 +50,28 @@ th, td {
 
 th {
     text-align: left;
+    text-indent: 6px;
 }
+
 .results-container tbody tr {
     cursor: pointer;
 }
+
 td:first-child {
     width: 18px;
 }
 
+td.font-size {
+    padding-left: 4px;
+}
+
+td.elements-counter {
+    text-align: right;
+    padding-right: 4px;
+}
+
 td.sample {
-    padding: 4px;
+    padding: 6px 4px 4px;
     text-align: center;
 }
 
@@ -87,7 +102,7 @@ table li {
     font-weight: normal;
     font-size: 1em;
     color: #444;
-    margin: 1px 0;
+    margin: 0;
     padding: 0 5px 0 25px;
     background: url(icons/tree_b.gif) 3px top no-repeat;
     line-height: 1.4;
@@ -105,23 +120,49 @@ tbody tr:nth-child(2n) {
     background-color: #EFEFEF;
 }
 
+tbody tr:hover,
+tbody tr:focus{
+    background-color: rgb(235,242,249);
+}
+
+tbody tr:focus{
+    outline-color: -webkit-focus-ring-color;
+    outline-style: auto;
+    outline-width: 5px;
+}
+
 .contrast-value {
     padding-left: 20px;
     font-weight: bold;
 }
 
 .AA tr.validAA .contrast-value,
-.AAA tr.validAAA .contrast-value {
-    background: transparent url(icons/ok.png) left 2px no-repeat;
+.AAA tr.validAAA .contrast-value,
+.single-validation .single-validation-small.valid,
+.single-validation .single-validation-large.valid{
+    background: transparent url(icons/ok.png) left 3px no-repeat;
 }
 
 .AA tr.invalidAA .contrast-value,
-.AAA tr.invalidAAA .contrast-value {
-    background: transparent url(icons/error.png) left 2px no-repeat;
+.AAA tr.invalidAAA .contrast-value,
+.single-validation .single-validation-small,
+.single-validation .single-validation-large{
+    background: transparent url(icons/error.png) left 3px no-repeat;
 }
 
 .navigation-bar {
+    width: 100%;
+    padding: 3px 1%;
+    box-sizing: border-box;
+    margin: auto;
     text-align: right;
+    background-color: #DDDDDD;
+}
+
+.selector-bar {
+    position: absolute;
+    right: 0;
+    margin-top: 15px;
 }
 
 #refresh,
@@ -161,13 +202,15 @@ tbody tr:nth-child(2n) {
     padding: 5px 0 4px 5px;
     cursor: pointer;
 }
-.collapser:before{
+
+.collapser:before {
     content: '';
     display: inline-block;
     border: 5px solid;
     border-color: transparent transparent transparent #000;
 }
-.expanded .collapser:before{
+
+.expanded .collapser:before {
     border-color: #000 transparent transparent;
 }
 
@@ -175,28 +218,40 @@ tbody tr:nth-child(2n) {
     width: 100%;
 }
 
-.color-tool {
-    float: left;
-    width: 50%;
+.color-tools .color-input {
+    width: 96%;
+    margin: 5px auto;
 }
 
-.color-tool label{
+.color-tool {
+    display: inline-block;
+    margin: 0 1%;
+    width: 48%;
+}
+
+.color-tool label {
+    font-weight: bold;
     display: block;
 }
 
-.color-tool input{
+.color-tool input {
     height: 25px;
     vertical-align: middle;
 }
 
-.color-tool input[type=text]{
+.color-tool input[type=text] {
     width: 80%;
 }
 
-.color-tool input[type=color]{
+.color-tool input[type=color] {
     width: 20%;
 }
+
 .color-tools #exampleText {
+    width: 80%;
+    margin: 10px 10%;
+    border: 1px solid;
+    box-sizing: border-box;
     clear: both;
     text-align: center;
     font-size: 20px;

@@ -70,17 +70,17 @@
             widgetContent = createElement('div'),
             contrastResults = createResultsContainer({
                 caption: 'Visible elements',
-                headers: [{content: 'Contrast', colspan: 2}, {content: 'Size', colspan: 2}, {
+                headers: [{content: 'Contrast', colspan: 2}, {
                     content: 'Elements',
-                    colspan: 2
+                    colspan: 4
                 }],
                 class: 'results AA'
             }),
             contrastResultsNoVisible = createResultsContainer({
                 caption: 'Hidden elements',
-                headers: [{content: 'Contrast', colspan: 2}, {content: 'Size', colspan: 2}, {
+                headers: [{content: 'Contrast', colspan: 2}, {
                     content: 'Elements',
-                    colspan: 2
+                    colspan: 4
                 }],
                 class: 'results AA'
             }),
@@ -116,7 +116,7 @@
                 counter += elementsByTag.length;
 
                 elementItem = createElement('li', {content: elementsByTag.length + ' ' + tag, tabindex: 0});
-                elementItem.addEventListener('focus', highlightElements(elementsByTag, RGBToHex(colors.foregroundColor), RGBToHex(colors.backgroundColor)));
+                elementItem.addEventListener('focus', highlightElements(elementsByTag, colors.foregroundColor, colors.backgroundColor));
                 elementItem.addEventListener('blur', removeHighlightFromElements(elementsByTag));
                 sublist.appendChild(elementItem)
             }
@@ -125,29 +125,35 @@
                 rowClass = isValidAA ? 'validAA' : 'invalidAA';
                 rowClass += isValidAAA ? ' validAAA' : ' invalidAAA';
                 rowContent.push({content: contrast, rowClass: rowClass, class: 'contrast-value'});
-                rowContent.push(fontSize);
-            }
 
-            rowContent.push({
-                content: '',
-                class: 'sample',
-                style: colors ? 'color:' + RGBObjectToString(colors.foregroundColor) + ';background-color:' + RGBObjectToString(colors.backgroundColor) : ''
-            });
-            rowContent.push(counter.toString());
-            rowContent.push(tags.join(', '));
+                rowContent.push({
+                    content: '',
+                    class: 'sample',
+                    style: colors ? 'color:' + RGBObjectToString(colors.foregroundColor) + ';background-color:' + RGBObjectToString(colors.backgroundColor) : ''
+                });
+                rowContent.push({content: fontSize, class: 'font-size'});
+            }
+            rowContent.push({content: counter.toString(), class: 'elements-counter'});
 
 
             if (sublist.childNodes.length > 1) {
-                rowContent._ezpandable = true;
+                rowContent._expandable = true;
+                rowContent.push('[' + tags.join(', ') + ']');
+            } else {
+                rowContent.push(tags.join(', '));
             }
 
+            rowContent._initialEmptyColumn = true;
+
             newRow = createRow(rowContent, {tabindex: 0});
-            newRow.addEventListener('focus', highlightElements(elementsByValue, RGBToHex(colors.foregroundColor), RGBToHex(colors.backgroundColor)));
+            newRow.addEventListener('focus', highlightElements(elementsByValue, colors.foregroundColor, colors.backgroundColor));
             newRow.addEventListener('blur', removeHighlightFromElements(elementsByValue));
 
             if (sublist.childNodes.length > 1) {
                 newRow.querySelectorAll('td:last-child')[0].appendChild(sublist)
             }
+
+            newRow.onkeydown = keyboardHandler;
 
             if (isVisible) {
                 tableBody.appendChild(newRow);
@@ -163,107 +169,35 @@
 
         return widgetContent;
 
-        function createRow(contentArray, parameters) {
-            var collapser, cell,
-                row = createElement('tr');
+        function keyboardHandler(event) {
+            var keyCode = event.which,
+                row = event.target;
 
-            if (contentArray._ezpandable) {
-                collapser = createElement('span', {class: 'collapser'});
-                collapser.addEventListener('click', toggle(row));
-                cell = createElement('td');
-                cell.appendChild(collapser);
-                row.appendChild(cell);
-                row.classList.add('expandable');
-            } else {
-                row.appendChild(createElement('td'));
+            while (row.tagName.toLowerCase() !== 'tr') {
+                row = target.parentNode;
             }
 
-            contentArray.forEach(function (cellContent) {
-                if (typeof cellContent === 'string') {
-                    cell = createElement('td', {content: cellContent});
-                    row.appendChild(cell);
-                } else {
-                    cell = createElement('td', cellContent);
-                    if (cellContent.rowClass) {
-                        cellContent.rowClass.split(' ').forEach(function (rowClass) {
-                            row.classList.add(rowClass);
-                        });
-                    }
-                    row.appendChild(cell);
-                }
-            });
-
-            if (parameters) {
-                for (var parameterName in parameters) {
-                    row.setAttribute(parameterName, parameters[parameterName]);
-                }
+            if (keyCode === KEYS.DOWN_ARROW && row.nextSibling) {
+                row.nextSibling.focus();
+            } else if (keyCode === KEYS.UP_ARROW && row.previousSibling) {
+                row.previousSibling.focus();
+            } else if ((keyCode === KEYS.ENTER || keyCode === KEYS.SPACE) && row.classList.contains('expandable')) {
+                row.classList.toggle('expanded');
             }
 
-            row.onkeydown = keyboardHandler;
 
-            return row;
-
-            function keyboardHandler(event) {
-                var keyCode = event.which,
-                    row = event.target;
-
-                while (row.tagName.toLowerCase() !== 'tr') {
-                    row = target.parentNode;
-                }
-
-                if (keyCode === KEYS.DOWN_ARROW && row.nextSibling) {
-                    row.nextSibling.focus();
-                } else if (keyCode === KEYS.UP_ARROW && row.previousSibling) {
-                    row.previousSibling.focus();
-                } else if (keyCode === KEYS.ENTER && row.classList.contains('expandable')) {
-                    row.classList.toggle('expanded');
-                }
-
-
-                if (keyCode === KEYS.DOWN_ARROW || keyCode === KEYS.UP_ARROW) {
-                    event.preventDefault();
-                }
-            }
-
-            function toggle(row) {
-                return function (event) {
-                    row.classList.toggle('expanded');
-                }
+            if (keyCode === KEYS.DOWN_ARROW || keyCode === KEYS.UP_ARROW) {
+                event.preventDefault();
             }
         }
 
         function createResultsContainer(config) {
-            var headerCell,
-                tableWrapper = createElement('div', {class: 'results-container'}),
-                table = createElement('table', config.class ? {class: config.class} : {}),
-                caption = createElement('caption', {content: config.caption || ''}),
-                thead = createElement('thead'),
-                tbody = createElement('tbody'),
-                headerRow = createElement('tr');
-
-            config.headers.forEach(function (header, index) {
-                headerCell = createElement('th', typeof header === 'string' ? {content: header} : header);
-                headerCell.onclick = sort(table, index);
-                headerRow.appendChild(headerCell);
-            });
-
-            if (config.caption) {
-                table.appendChild(caption);
-            }
-
-            thead.appendChild(headerRow);
-            table.appendChild(thead);
-            table.appendChild(tbody);
+            var tableWrapper = createElement('div', {class: 'results-container'}),
+                table = createTable(config);
 
             tableWrapper.appendChild(table);
 
             return tableWrapper;
-
-            function sort(table, index) {
-                return function () {
-                    sortTable(table.querySelectorAll('tbody')[0], index)
-                }
-            }
         }
     }
 
@@ -272,11 +206,17 @@
     }
 
     function sendMessageToBackgroundScript(messageObject) {
-        contrastColorCheckerPort.postMessage(messageObject);
+        try {
+            contrastColorCheckerPort.postMessage(messageObject);
+        } catch (error) {
+        }
     }
 
     function highlightElements(elements, foreground, background) {
         return function () {
+            var foregroundColor = RGBToHex(foreground),
+                backgroundColor = RGBToHex(background);
+
             if (elements) {
                 highlightedElements = elements;
                 elements.forEach(function (element) {
@@ -289,13 +229,16 @@
                         element.style.boxShadow = 'inset 0 0 0 1px #F00';
                     }
                 });
-                iframeContentDocument.getElementById('foreground').value = foreground;
-                iframeContentDocument.getElementById('foreground-selector').value = foreground;
-                iframeContentDocument.getElementById('exampleText').style.color = foreground;
 
-                iframeContentDocument.getElementById('background').value = background;
-                iframeContentDocument.getElementById('background-selector').value = background;
-                iframeContentDocument.getElementById('exampleText').style.backgroundColor = background;
+                iframeContentDocument.getElementById('foreground').value = foregroundColor;
+                iframeContentDocument.getElementById('foreground-selector').value = foregroundColor;
+                iframeContentDocument.getElementById('exampleText').style.color = foregroundColor;
+
+                iframeContentDocument.getElementById('background').value = backgroundColor;
+                iframeContentDocument.getElementById('background-selector').value = backgroundColor;
+                iframeContentDocument.getElementById('exampleText').style.backgroundColor = backgroundColor;
+
+                singleEvaluation();
             }
         }
     }
@@ -327,7 +270,10 @@
 
     function setMutationObserver() {
         onEndingDOMChangeCallback = function (mutations) {
-            if ((mutations[0].addedNodes.length && mutations[0].addedNodes[0].classList.contains('visualHelper')) || (mutations[0].removedNodes.length && mutations[0].removedNodes[0].classList.contains('visualHelper'))) {
+            if (
+                (mutations[0].addedNodes.length && mutations[0].addedNodes[0].classList && mutations[0].addedNodes[0].classList.contains('visualHelper'))
+                || (mutations[0].removedNodes.length && mutations[0].removedNodes[0].classList && mutations[0].removedNodes[0].classList.contains('visualHelper'))
+            ) {
                 return;
             }
 
@@ -348,7 +294,7 @@
             baseURL = chrome.extension.getURL('html/'),
             iframeCSS,
             iframeHead,
-            iframeWidget = createElement('iframe', {'id': contrastCheckerIframeWrapperId}),
+            iframeWidget = createElement('iframe', {'id': contrastCheckerIframeWrapperId, 'aria-hidden': 'true'}),
             iframeWidgetContentWindow;
 
         bodyParent.insertBefore(iframeWidget, body);
@@ -379,9 +325,9 @@
                     iframeContentDocument.head.innerHTML = iframeHead;
 
                     iframeBody.appendChild(navigationBar);
+                    iframeBody.appendChild(selectorBar);
                     widgetWrapper.appendChild(widgetContent);
                     iframeBody.appendChild(widgetWrapper);
-                    iframeBody.appendChild(selectorBar);
                     iframeBody.appendChild(colorTools);
 
                     return iframeWidget;
@@ -427,6 +373,48 @@
         }
     }
 
+    function singleEvaluation() {
+        var foregroundColor = iframeContentDocument.getElementById('foreground').value,
+            backgroundColor = iframeContentDocument.getElementById('background').value,
+            contrast, smallAA, largeAA, smallAAA, largeAAA;
+
+        if (!isValidHex(foregroundColor) || !isValidHex(backgroundColor)) {
+            return;
+        }
+
+        contrast = getContrastDiff(hexToRGB(foregroundColor), hexToRGB(backgroundColor));
+        smallAA = iframeContentDocument.querySelectorAll('.single-validation-AA .single-validation-small')[0];
+        largeAA = iframeContentDocument.querySelectorAll('.single-validation-AA .single-validation-large')[0];
+        smallAAA = iframeContentDocument.querySelectorAll('.single-validation-AAA .single-validation-small')[0];
+        largeAAA = iframeContentDocument.querySelectorAll('.single-validation-AAA .single-validation-large')[0];
+
+        iframeContentDocument.querySelectorAll('.single-validation-contrast').forEach(function (element) {
+            element.innerHTML = contrast;
+        });
+
+        if (contrast >= 7) {
+            smallAA.classList.add('valid');
+            smallAAA.classList.add('valid');
+            largeAA.classList.add('valid');
+            largeAAA.classList.add('valid');
+        } else if (contrast < 7 && contrast >= 4.5) {
+            smallAA.classList.add('valid');
+            smallAAA.classList.remove('valid');
+            largeAA.classList.add('valid');
+            largeAAA.classList.add('valid');
+        } else if (contrast < 4.5 && contrast >= 3) {
+            smallAA.classList.remove('valid');
+            smallAAA.classList.remove('valid');
+            largeAA.classList.add('valid');
+            largeAAA.classList.remove('valid');
+        } else if (contrast < 3) {
+            smallAA.classList.remove('valid');
+            smallAAA.classList.remove('valid');
+            largeAA.classList.remove('valid');
+            largeAAA.classList.remove('valid');
+        }
+    }
+
     function createElement(tagName, parameters) {
         var newElement = document.createElement(tagName),
             textContent;
@@ -443,6 +431,84 @@
         }
 
         return newElement
+    }
+
+    function createTable(config) {
+        var headerCell,
+            table = createElement('table', config.class ? {class: config.class} : {}),
+            caption = createElement('caption', {content: config.caption || ''}),
+            thead = createElement('thead'),
+            tbody = createElement('tbody'),
+            headerRow = createElement('tr');
+
+        config.headers.forEach(function (header, index) {
+            headerCell = createElement('th', typeof header === 'string' ? {content: header} : header);
+            headerCell.onclick = sort(table, index);
+            headerRow.appendChild(headerCell);
+        });
+
+        if (config.caption) {
+            table.appendChild(caption);
+        }
+
+        thead.appendChild(headerRow);
+        table.appendChild(thead);
+        table.appendChild(tbody);
+
+        return table;
+
+        function sort(table, index) {
+            return function () {
+                sortTable(table.querySelectorAll('tbody')[0], index)
+            }
+        }
+    }
+
+    function createRow(contentArray, parameters) {
+        var collapser, cell,
+            row = createElement('tr');
+
+        if (contentArray._initialEmptyColumn) {
+            if (contentArray._expandable) {
+                collapser = createElement('span', {class: 'collapser'});
+                collapser.addEventListener('click', toggle(row));
+                cell = createElement('td');
+                cell.appendChild(collapser);
+                row.appendChild(cell);
+                row.classList.add('expandable');
+            } else {
+                row.appendChild(createElement('td'));
+            }
+        }
+
+        contentArray.forEach(function (cellContent) {
+            if (typeof cellContent === 'string') {
+                cell = createElement('td', {content: cellContent});
+                row.appendChild(cell);
+            } else {
+                cell = createElement('td', cellContent);
+                if (cellContent.rowClass) {
+                    cellContent.rowClass.split(' ').forEach(function (rowClass) {
+                        row.classList.add(rowClass);
+                    });
+                }
+                row.appendChild(cell);
+            }
+        });
+
+        if (parameters) {
+            for (var parameterName in parameters) {
+                row.setAttribute(parameterName, parameters[parameterName]);
+            }
+        }
+
+        return row;
+
+        function toggle(row) {
+            return function (event) {
+                row.classList.toggle('expanded');
+            }
+        }
     }
 
     function createWidgetControlButtons() {
@@ -517,42 +583,77 @@
 
     function createColorTools() {
         var colorTools = createElement('div', {class: 'color-tools'}),
-            foregroundInput = createInputForColor('Foreground color', 'foreground', '#000000'),
-            backgroundInput = createInputForColor('Background color', 'background', '#FFFFFF'),
+            inputWrapper = createElement('div', {class: 'color-input'}),
+            foregroundInput = createInputForColor('Foreground color (hex.)', 'foreground', '#000000'),
+            backgroundInput = createInputForColor('Background color (hex.)', 'background', '#FFFFFF'),
             exampleText = createElement('div', {
                 content: 'Example text',
                 id: 'exampleText',
                 style: 'color: #000000; background-color: #FFFFFF'
-            });
+            }),
+            validationTable = createTable(
+                {
+                    headers: ['Contrast', 'Level', 'small', 'large'],
+                    class: 'single-validation'
+                }),
+            tableBody = validationTable.querySelector('tbody'),
+            rowAA = createRow([{content: 'AA', class: 'single-validation-level'}, {
+                class: 'single-validation-contrast',
+                content: '21'
+            }, {class: 'single-validation-small valid'}, {class: 'single-validation-large valid'}], {class: 'single-validation-AA'}),
+            rowAAA = createRow([{
+                content: 'AAA',
+                class: 'single-validation-level'
+            }, {
+                class: 'single-validation-contrast',
+                content: '21'
+            }, {class: 'single-validation-small valid'}, {class: 'single-validation-large valid'}], {class: 'single-validation-AAA'});
 
-        colorTools.appendChild(foregroundInput);
-        colorTools.appendChild(backgroundInput);
+        inputWrapper.appendChild(foregroundInput);
+        inputWrapper.appendChild(backgroundInput);
+        colorTools.appendChild(inputWrapper);
         colorTools.appendChild(exampleText);
+
+        tableBody.appendChild(rowAA);
+        tableBody.appendChild(rowAAA);
+
+        colorTools.appendChild(validationTable);
 
         return colorTools;
 
         function createInputForColor(label, inputId, defaultColor) {
             var wrapper = createElement('div', {class: 'color-tool'}),
                 inputLabel = createElement('label', {for: inputId, content: label}),
-                inputField = createElement('input', {id: inputId, type: 'text', value: defaultColor}),
+                inputField = createElement('input', {
+                    id: inputId,
+                    type: 'text',
+                    value: defaultColor,
+                    placeholder: 'ex. ' + defaultColor
+                }),
                 colorSelector = createElement('input', {id: inputId + '-selector', type: 'color', value: defaultColor});
 
             inputField.onchange = function () {
+                if (!isValidHex(this.value)) {
+                    return;
+                }
                 colorSelector.value = hexShorthandToExtended(this.value);
+
                 if (inputId === 'foreground') {
                     iframeContentDocument.getElementById('exampleText').style.color = this.value;
                 } else {
                     iframeContentDocument.getElementById('exampleText').style.backgroundColor = this.value;
                 }
+                singleEvaluation();
             };
 
             colorSelector.onchange = function () {
-                colorSelector.value = this.value;
+                inputField.value = this.value;
                 if (inputId === 'foreground') {
                     iframeContentDocument.getElementById('exampleText').style.color = this.value;
                 } else {
                     iframeContentDocument.getElementById('exampleText').style.backgroundColor = this.value;
                 }
+                singleEvaluation();
             };
 
             wrapper.appendChild(inputLabel);
@@ -637,14 +738,13 @@
         fontWeight = getComputedStyle.getPropertyValue('font-weight');
         isBold = parseInt(fontWeight) >= 700 || fontWeight === 'bold' || fontWeight == 'bolder';
 
-        textType = (fontSize >= largeSize || (fontSize >= normalSize && isBold)) ? 'L' : 'N';
+        textType = (fontSize >= largeSize || (fontSize >= normalSize && isBold)) ? 'large' : 'small';
 
         foregroundColor = RGBStringToObject(getComputedStyle.getPropertyValue('color'));
         if (foregroundColor.o > 0 && foregroundColor.o < 1) {
             foregroundColor = getAdjustedColorWithOpacity(foregroundColor, element);
         }
         contrast = getContrastDiff(foregroundColor, backgroundColor);
-
 
         evaluation = {
             element: element,
@@ -656,7 +756,8 @@
             contrast: contrast,
             isVisible: isVisible
         };
-        if (textType === 'N') {
+
+        if (textType === 'small') {
             evaluation.isValidAA = contrast >= 4.5;
             evaluation.isValidAAA = contrast >= 7;
         } else {
@@ -780,6 +881,27 @@
 
     function getAdjustedValueWithAlphaChannel(v1, v2, alpha) {
         return Math.floor(v2 + (v1 - v2) * alpha);
+    }
+
+    function isValidHex(hexToCheck) {
+        if (!hexToCheck || typeof hexToCheck !== 'string' || hexToCheck.indexOf('#') > 0) {
+            return false;
+        }
+
+        hexToCheck = hexToCheck.replace('#', '');
+
+        switch (hexToCheck.length) {
+            case 3:
+                return /^[0-9A-F]{3}$/i.test(hexToCheck);
+            case 6:
+                return /^[0-9A-F]{6}$/i.test(hexToCheck);
+            case 8:
+                return /^[0-9A-F]{8}$/i.test(hexToCheck);
+            default:
+                return false;
+        }
+
+        return false;
     }
 
     function hexShorthandToExtended(shorthandHex) {
