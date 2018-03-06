@@ -32,7 +32,7 @@
   },
   "applications": {
     "gecko": {
-      "id": "wcagcontrastchecker@colorcheckerniquelao.net",
+      "id": "colorchecker@colorcheckerniquelao.net",
       "strict_min_version": "58.0a1"
     }
   }
