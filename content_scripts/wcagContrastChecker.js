@@ -58,6 +58,8 @@
             resultStrings, isVisible, contrast, fontSize, isValidAA, isValidAAA,
             sublist, elementItem, counter,
             rowContent, newRow, rowClass,
+            visibleElementsCounter = 0,
+            invisibleElementsCounter = 0,
             results = checkAllElementsInDocument(),
             widgetContent = createElement('div'),
             contrastResults = createResultsContainer({
@@ -149,12 +151,19 @@
 
             if (isVisible) {
                 tableBody.appendChild(newRow);
+                visibleElementsCounter++;
             } else {
                 tableNoVisibleBody.appendChild(newRow);
+                invisibleElementsCounter++;
             }
         }
-        widgetContent.appendChild(contrastResults);
-        widgetContent.appendChild(contrastResultsNoVisible);
+
+        if (visibleElementsCounter) {
+            widgetContent.appendChild(contrastResults);
+        }
+        if (invisibleElementsCounter) {
+            widgetContent.appendChild(contrastResultsNoVisible);
+        }
 
         sortTable(tableBody, 1);
         sortTable(tableNoVisibleBody, 1);
@@ -317,15 +326,12 @@
                     iframeContentDocument.head.innerHTML = iframeHead;
 
                     iframeBody.appendChild(navigationBar);
-                    iframeBody.appendChild(selectorBar);
                     widgetWrapper.appendChild(widgetContent);
                     iframeBody.appendChild(widgetWrapper);
+                    iframeBody.appendChild(selectorBar);
                     iframeBody.appendChild(colorTools);
-
-                    return iframeWidget;
-                } else {
-                    return iframeWidget;
                 }
+                return iframeWidget;
             }
         };
         xmlhttp.onerror = function (e) {
@@ -519,23 +525,29 @@
 
     function createSelectorBar() {
         var selectorBar = createElement('div', {class: 'selector-bar'}),
+            levelSwitcherLabel = createElement('label', {content: 'WCAG level: ', for: 'levelSwitcher'}),
             levelSwitcher = createSwitcher(
                 [
-                    {content: 'level AA', value: 'AA'},
-                    {content: 'level AAA', value: 'AAA'}
+                    {content: 'AA', value: 'AA'},
+                    {content: 'AAA', value: 'AAA'}
                 ],
                 contrastLevelChecker,
+                'levelSwitcher',
                 switchContrastLevelChecker),
+            refreshSwitcherLabel = createElement('label', {content: 'Refresh on DOM updates: ', for: 'refreshSwitcher'}),
             refreshSwitcher = createSwitcher(
                 [
-                    {content: 'auto-refresh on', value: 'on'},
-                    {content: 'auto-refresh off', value: 'off'}
+                    {content: 'on', value: 'on'},
+                    {content: 'off', value: 'off'}
                 ],
                 autoRefreshCheck,
+                'refreshSwitcher',
                 switchAutoRefresh);
 
-        selectorBar.appendChild(refreshSwitcher);
-        selectorBar.appendChild(levelSwitcher);
+        selectorBar.appendChild(levelSwitcherLabel);
+        levelSwitcherLabel.appendChild(levelSwitcher);
+        selectorBar.appendChild(refreshSwitcherLabel);
+        refreshSwitcherLabel.appendChild(refreshSwitcher);
 
         return selectorBar;
 
@@ -575,7 +587,6 @@
 
     function createColorTools() {
         var colorTools = createElement('div', {class: 'color-tools'}),
-            toolsHeader = createElement('h2', {content: 'Checker tool'}),
             inputWrapper = createElement('div', {class: 'color-input'}),
             foregroundInput = createInputForColor('Foreground color (hex.)', 'foreground', defaultForegroundColor),
             backgroundInput = createInputForColor('Background color (hex.)', 'background', defaultBackgroundColor),
@@ -605,16 +616,15 @@
                 ]
             );
 
-        colorTools.appendChild(toolsHeader);
         inputWrapper.appendChild(foregroundInput);
         inputWrapper.appendChild(backgroundInput);
         colorTools.appendChild(inputWrapper);
-        colorTools.appendChild(exampleText);
 
         tableBody.appendChild(rowAA);
         tableBody.appendChild(rowAAA);
 
         colorTools.appendChild(validationTable);
+        colorTools.appendChild(exampleText);
 
         return colorTools;
 
@@ -661,9 +671,9 @@
         }
     }
 
-    function createSwitcher(options, value, callback) {
+    function createSwitcher(options, value, selectId, callback) {
         var optionElement,
-            switcher = createElement('select', {value: value});
+            switcher = createElement('select', {value: value, id: selectId});
 
         options.forEach(function (option) {
             optionElement = createElement('option', option);

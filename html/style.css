@@ -7,6 +7,9 @@ body {
     color: #444;
     background: #f5f5f5;
     position: relative;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
 }
 
 body:before {
@@ -20,8 +23,14 @@ body:before {
 }
 
 #contrastCheckerWrapper {
+    background: #FFFFFF;
     width: 98%;
-    padding: 5px 1%;
+    flex-shrink: 1;
+    flex-grow: 2;
+    overflow-y: auto;
+    border: 1px #DDD inset;
+    box-sizing: border-box;
+    margin: 3px auto;
 }
 
 html, body {
@@ -37,9 +46,7 @@ table {
 
 caption {
     font-weight: bold;
-    margin-top: 15px;
-    margin-bottom: 3px;
-    text-align: left;
+    margin: 3px;
     font-size: 1.1em;
 }
 
@@ -48,13 +55,33 @@ th, td {
     padding: 4px 0;
 }
 
-th {
+th,
+.color-tools td {
     text-align: left;
     text-indent: 6px;
 }
 
+th[colspan="4"] {
+    width: 100%;
+}
+
+.single-validation {
+    background: #FFFFFF;
+    border: 1px #DDD inset;
+    box-sizing: border-box;
+    margin: 10px auto;
+}
+
+.results-container {
+    margin: 5px 0 10px;
+}
+
 .results-container tbody tr {
     cursor: pointer;
+}
+
+.results-container td:last-child {
+    width: 200px;
 }
 
 td:first-child {
@@ -62,12 +89,14 @@ td:first-child {
 }
 
 td.font-size {
-    padding-left: 4px;
+    padding-left: 5px;
+    padding-right: 5px;
 }
 
 td.elements-counter {
     text-align: right;
     padding-right: 4px;
+    width: 20px;
 }
 
 td.sample {
@@ -121,11 +150,11 @@ tbody tr:nth-child(2n) {
 }
 
 tbody tr:hover,
-tbody tr:focus{
-    background-color: rgb(235,242,249);
+tbody tr:focus {
+    background-color: rgb(235, 242, 249);
 }
 
-tbody tr:focus{
+tbody tr:focus {
     outline-color: -webkit-focus-ring-color;
     outline-style: auto;
     outline-width: 5px;
@@ -133,6 +162,7 @@ tbody tr:focus{
 
 .contrast-value {
     padding-left: 20px;
+    padding-right: 5px;
     font-weight: bold;
 }
 
@@ -141,7 +171,7 @@ tbody tr:focus{
 .single-validation .single-validation-AA-small.valid,
 .single-validation .single-validation-AA-large.valid,
 .single-validation .single-validation-AAA-small.valid,
-.single-validation .single-validation-AAA-large.valid{
+.single-validation .single-validation-AAA-large.valid {
     background: transparent url(icons/ok.png) left 3px no-repeat;
 }
 
@@ -150,7 +180,7 @@ tbody tr:focus{
 .single-validation .single-validation-AA-small,
 .single-validation .single-validation-AA-large,
 .single-validation .single-validation-AAA-small,
-.single-validation .single-validation-AAA-large{
+.single-validation .single-validation-AAA-large {
     background: transparent url(icons/error.png) left 3px no-repeat;
 }
 
@@ -164,9 +194,16 @@ tbody tr:focus{
 }
 
 .selector-bar {
-    position: absolute;
-    right: 0;
-    margin-top: 15px;
+    text-align: right;
+    width: 98%;
+    margin: 0 auto;
+}
+
+.selector-bar label{
+    float: right;
+    width: 98%;
+    clear: both;
+    margin: 0 auto 5px;
 }
 
 #refresh,
@@ -219,18 +256,26 @@ tbody tr:focus{
 }
 
 .color-tools {
-    width: 100%;
+    background: #FFFFFF;
+    width: 98%;
+    border: 1px #DDD inset;
+    box-sizing: border-box;
+    margin: 3px auto;
 }
 
 .color-tools .color-input {
-    width: 96%;
+    width: 98%;
     margin: 5px auto;
 }
 
 .color-tool {
     display: inline-block;
-    margin: 0 1%;
-    width: 48%;
+    margin: 0 1% 0 0;
+    width: 49%;
+}
+
+.color-tool + .color-tool {
+    margin: 0 0 0 1%;
 }
 
 .color-tool label {
@@ -252,7 +297,7 @@ tbody tr:focus{
 }
 
 .color-tools #exampleText {
-    width: 96%;
+    width: 100%;
     margin: 10px auto;
     border: 1px dotted;
     box-sizing: border-box;
@@ -260,4 +305,10 @@ tbody tr:focus{
     text-align: center;
     font-size: 16px;
     padding: 10px;
+}
+.color-tools .single-validation th,
+.color-tools .single-validation td {
+    text-align: center;
+    width: 25%;
+    background-position: center 3px !important;
 }
