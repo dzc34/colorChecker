@@ -4,6 +4,7 @@
 * Differentiate elements that are clearly hidden by using CSS techniques
 
 ### Nice to have and/or working on:
+* Add information, help, description, how-to,... (either about the extension and about WCAG contrast)
 * Test inside iframes
 * Show fields for rgb color
 * Color picker for selecting color in the page
