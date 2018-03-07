@@ -3,7 +3,7 @@
   "description": "To test the color contrast according to WCAG accessibility requirements",
   "author": "Rumoroso",
   "manifest_version": 2,
-  "version": "3.0.0",
+  "version": "3.0.1",
   "background": {
     "scripts": [
       "background.js"

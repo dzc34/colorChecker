@@ -62,24 +62,18 @@
             invisibleElementsCounter = 0,
             results = checkAllElementsInDocument(),
             widgetContent = createElement('div'),
+            visibleElementsTab = generateTabLink('visible elements', 'visibleElementsTab', 'visibleElements', true),
+            hiddenElementsTab = generateTabLink('hidden elements', 'hiddenElementsTab', 'hiddenElements'),
             contrastResults = createResultsContainer({
-                caption: 'Visible elements',
                 headers: [{content: 'Contrast', colspan: 2}, {
                     content: 'Elements',
                     colspan: 4
                 }],
-                class: 'results AA'
+                class: 'results AA',
+                tbody: ['visibleElements shown', 'hiddenElements']
             }),
-            contrastResultsNoVisible = createResultsContainer({
-                caption: 'Hidden elements',
-                headers: [{content: 'Contrast', colspan: 2}, {
-                    content: 'Elements',
-                    colspan: 4
-                }],
-                class: 'results AA'
-            }),
-            tableBody = contrastResults.querySelector('tbody'),
-            tableNoVisibleBody = contrastResultsNoVisible.querySelector('tbody');
+            tableBody = contrastResults.querySelectorAll('.visibleElements')[0],
+            tableNoVisibleBody = contrastResults.querySelectorAll('.hiddenElements')[0];
 
         for (resultLabel in results) {
             rowContent = [];
@@ -108,7 +102,6 @@
                 elementsByTag = elements[tag];
                 elementsByValue = elementsByValue.concat(elementsByTag);
                 counter += elementsByTag.length;
-
                 elementItem = createElement('li', {content: elementsByTag.length + ' ' + tag, tabindex: 0});
                 elementItem.addEventListener('focus', highlightElements(elementsByTag, colors.foregroundColor, colors.backgroundColor));
                 elementItem.addEventListener('blur', removeHighlightFromElements(elementsByTag));
@@ -158,17 +151,62 @@
             }
         }
 
-        if (visibleElementsCounter) {
-            widgetContent.appendChild(contrastResults);
+        if (!visibleElementsCounter) {
+            tableBody.appendChild(createRow(['', '', '', '', '']));
+            tableBody.appendChild(createRow([{content: 'no visible elements detected', class: 'empty', colspan: 100}]));
         }
-        if (invisibleElementsCounter) {
-            widgetContent.appendChild(contrastResultsNoVisible);
+
+        if (!invisibleElementsCounter) {
+            tableNoVisibleBody.appendChild(createRow(['', '', '', '', '']));
+            tableNoVisibleBody.appendChild(createRow([{
+                content: 'no hidden elements detected',
+                class: 'empty',
+                colspan: 100
+            }]));
         }
+
+        widgetContent.appendChild(visibleElementsTab);
+        widgetContent.appendChild(hiddenElementsTab);
+        widgetContent.appendChild(contrastResults);
 
         sortTable(tableBody, 1);
         sortTable(tableNoVisibleBody, 1);
 
         return widgetContent;
+
+        function generateTabLink(tabTex, tabId, mapId, isActive) {
+            var textNode = createTextNode(tabTex),
+                tabButton = createElement('a', {id: tabId, tabindex: 0, class: 'tab ' + (isActive ? 'active' : '')});
+
+            tabButton.onclick = function () {
+                switchPanel(tabId, mapId);
+            };
+
+            tabButton.appendChild(textNode);
+
+            return tabButton;
+
+            function switchPanel(tabId, bodyToShow) {
+                var tabs = widgetContent.querySelectorAll('.tab'),
+                    tbodyElements = contrastResults.querySelectorAll('tbody');
+
+                tabs.forEach(function (tab) {
+                    if (tab.id === tabId) {
+                        tab.classList.add('active');
+                    } else {
+                        tab.classList.remove('active');
+                    }
+                });
+
+                tbodyElements.forEach(function (tbody) {
+                    if (tbody.classList.contains(bodyToShow)) {
+                        tbody.classList.add('shown');
+                    } else {
+                        tbody.classList.remove('shown');
+                    }
+                });
+            }
+        }
 
         function keyboardHandler(event) {
             var keyCode = event.which,
@@ -431,12 +469,15 @@
         return newElement
     }
 
+    function createTextNode(text) {
+        return document.createTextNode(text);
+    }
+
     function createTable(config) {
         var headerCell,
             table = createElement('table', config.class ? {class: config.class} : {}),
             caption = createElement('caption', {content: config.caption || ''}),
             thead = createElement('thead'),
-            tbody = createElement('tbody'),
             headerRow = createElement('tr');
 
         config.headers.forEach(function (header, index) {
@@ -451,7 +492,14 @@
 
         thead.appendChild(headerRow);
         table.appendChild(thead);
-        table.appendChild(tbody);
+
+        if (config.tbody) {
+            config.tbody.forEach(function (tbodyClass) {
+                table.appendChild(createElement('tbody', {class: tbodyClass}));
+            });
+        } else {
+            table.appendChild(createElement('tbody'));
+        }
 
         return table;
 
@@ -534,7 +582,10 @@
                 contrastLevelChecker,
                 'levelSwitcher',
                 switchContrastLevelChecker),
-            refreshSwitcherLabel = createElement('label', {content: 'Refresh on DOM updates: ', for: 'refreshSwitcher'}),
+            refreshSwitcherLabel = createElement('label', {
+                content: 'Refresh on DOM updates: ',
+                for: 'refreshSwitcher'
+            }),
             refreshSwitcher = createSwitcher(
                 [
                     {content: 'on', value: 'on'},
@@ -1123,21 +1174,25 @@
             rows = table.querySelectorAll('tr');
             rowsLength = rows.length;
 
-            for (var i = 0; i < (rowsLength - 1); i++) {
-                shouldSwitch = false;
+            if (rowsLength > 1) {
+                for (var i = 0; i < (rowsLength - 1); i++) {
+                    shouldSwitch = false;
 
-                valueA = parseFloat(rows[i].querySelectorAll('td')[columnIndex].textContent);
-                valueB = parseFloat(rows[i + 1].querySelectorAll('td')[columnIndex].textContent);
+                    if (rows[i].querySelectorAll('td')[columnIndex] && rows[i + 1].querySelectorAll('td')[columnIndex]) {
+                        valueA = parseFloat(rows[i].querySelectorAll('td')[columnIndex].textContent);
+                        valueB = parseFloat(rows[i + 1].querySelectorAll('td')[columnIndex].textContent);
 
-                if (valueA > valueB) {
-                    shouldSwitch = true;
-                    break;
+                        if (valueA > valueB) {
+                            shouldSwitch = true;
+                            break;
+                        }
+                    }
                 }
-            }
 
-            if (shouldSwitch) {
-                rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
-                switching = true;
+                if (shouldSwitch) {
+                    rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
+                    switching = true;
+                }
             }
         }
     }
