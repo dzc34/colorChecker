@@ -243,6 +243,7 @@ tbody tr:focus {
     margin: 0 auto 5px;
 }
 
+#info,
 #refresh,
 #closer {
     display: inline-block;
@@ -255,11 +256,17 @@ tbody tr:focus {
     text-indent: -5000px;
 }
 
+#info:hover,
+#info:focus,
 #refresh:hover,
 #refresh:focus,
 #closer:hover,
 #closer:focus {
     opacity: .9;
+}
+
+#info {
+    background: center/contain no-repeat url(./icons/info.png);
 }
 
 #refresh {
@@ -352,4 +359,9 @@ tbody tr:focus {
     text-align: center;
     width: 25%;
     background-position: center 3px !important;
+}
+
+.description{
+    margin: 5px 10px;
+    display: none;
 }

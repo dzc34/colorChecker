@@ -6,7 +6,14 @@
         contrastCheckerWrapperId = 'contrastCheckerWrapper',
         defaultActivePanel = 'visibleElements',
         visibleElementsPanelClass = 'visibleElements',
+        visibleElementsPanelDescription = 'Visible elements are the elements that don\'t use CSS properties "display" ' +
+            'or "visibility" with values "none" or "hidden" respectively. Anyway, those elements can be also outside ' +
+            'of the view-port area or hidden by other elements with higher z-index value.',
         hiddenElementsPanelClass = 'hiddenElements',
+        hiddenElementsPanelDescription = 'Hidden elements are the elements that use CSS properties "display" ' +
+            'or "visibility" with values "none" or "hidden" respectively. These elements are usually part of collapsible' +
+            'menus or panel, flyouts, etc. The page could still have other hidden elements that were not detected ' +
+            'automatically.',
         contrastColorCheckerPort = chrome.runtime.connect({name: 'port-from-cs'}),
         mutationObserverParams = {childList: true, subtree: true},
         defaultDebounceTime = 250,
@@ -66,6 +73,8 @@
             results = checkAllElementsInDocument(),
             widgetContent = createElement('div'),
             visibleElementsTab = generateTabLink('visible elements', visibleElementsPanelClass, true),
+            visibleElementsPanelDescriptionParagraph = createElement('p', {content: visibleElementsPanelDescription, class: 'description'}),
+            hiddenElementsPanelDescriptionParagraph = createElement('p', {content: hiddenElementsPanelDescription, class: 'description'}),
             hiddenElementsTab = generateTabLink('hidden elements', hiddenElementsPanelClass),
             contrastResults = createResultsContainer({
                 headers: [{content: 'Contrast', colspan: 2}, {
@@ -170,6 +179,8 @@
 
         widgetContent.appendChild(visibleElementsTab);
         widgetContent.appendChild(hiddenElementsTab);
+        widgetContent.appendChild(visibleElementsPanelDescriptionParagraph);
+        widgetContent.appendChild(hiddenElementsPanelDescriptionParagraph);
         widgetContent.appendChild(contrastResults);
 
         getSettings(['activePanel'], setActivePanel);
@@ -200,12 +211,12 @@
             return tabButton;
         }
 
-        function switchPanel(panelId) {
+        function switchPanel(panelClass) {
             var tabs = widgetContent.querySelectorAll('.tab'),
                 tbodyElements = contrastResults.querySelectorAll('tbody');
 
             tabs.forEach(function (tab) {
-                if (tab.id === panelId + 'Tab') {
+                if (tab.id === panelClass + 'Tab') {
                     tab.classList.add('active');
                 } else {
                     tab.classList.remove('active');
@@ -213,14 +224,14 @@
             });
 
             tbodyElements.forEach(function (tbody) {
-                if (tbody.classList.contains(panelId)) {
+                if (tbody.classList.contains(panelClass)) {
                     tbody.classList.add('shown');
                 } else {
                     tbody.classList.remove('shown');
                 }
             });
 
-            saveSettings({activePanel: panelId});
+            saveSettings({activePanel: panelClass});
         }
 
         function keyboardHandler(event) {
@@ -575,16 +586,23 @@
 
     function createWidgetControlButtons() {
         var navigationBar = createElement('div', {class: 'navigation-bar'}),
+            infoButton = createElement('button', {content: 'info', id: 'info'}),
             refreshButton = createElement('button', {content: 'refresh', id: 'refresh'}),
             closeButton = createElement('button', {content: 'close', id: 'closer'});
 
+        infoButton.onclick = showInfo;
         refreshButton.onclick = refreshWidget;
         closeButton.onclick = closeWidget;
 
         navigationBar.appendChild(refreshButton);
+        navigationBar.appendChild(infoButton);
         navigationBar.appendChild(closeButton);
 
         return navigationBar;
+
+        function showInfo(){
+
+        }
     }
 
     function createSelectorBar() {
