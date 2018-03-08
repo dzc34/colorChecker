@@ -4,6 +4,9 @@
         navigationBar, selectorBar,
         contrastCheckerIframeWrapperId = 'contrastCheckerIframeWrapper',
         contrastCheckerWrapperId = 'contrastCheckerWrapper',
+        defaultActivePanel = 'visibleElements',
+        visibleElementsPanelClass = 'visibleElements',
+        hiddenElementsPanelClass = 'hiddenElements',
         contrastColorCheckerPort = chrome.runtime.connect({name: 'port-from-cs'}),
         mutationObserverParams = {childList: true, subtree: true},
         defaultDebounceTime = 250,
@@ -62,18 +65,18 @@
             invisibleElementsCounter = 0,
             results = checkAllElementsInDocument(),
             widgetContent = createElement('div'),
-            visibleElementsTab = generateTabLink('visible elements', 'visibleElementsTab', 'visibleElements', true),
-            hiddenElementsTab = generateTabLink('hidden elements', 'hiddenElementsTab', 'hiddenElements'),
+            visibleElementsTab = generateTabLink('visible elements', visibleElementsPanelClass, true),
+            hiddenElementsTab = generateTabLink('hidden elements', hiddenElementsPanelClass),
             contrastResults = createResultsContainer({
                 headers: [{content: 'Contrast', colspan: 2}, {
                     content: 'Elements',
                     colspan: 4
                 }],
                 class: 'results AA',
-                tbody: ['visibleElements shown', 'hiddenElements']
+                tbody: ['visibleElements shown', hiddenElementsPanelClass]
             }),
-            tableBody = contrastResults.querySelectorAll('.visibleElements')[0],
-            tableNoVisibleBody = contrastResults.querySelectorAll('.hiddenElements')[0];
+            tableBody = contrastResults.querySelectorAll('.' + visibleElementsPanelClass)[0],
+            tableNoVisibleBody = contrastResults.querySelectorAll('.' + hiddenElementsPanelClass)[0];
 
         for (resultLabel in results) {
             rowContent = [];
@@ -169,43 +172,55 @@
         widgetContent.appendChild(hiddenElementsTab);
         widgetContent.appendChild(contrastResults);
 
+        getSettings(['activePanel'], setActivePanel);
+
         sortTable(tableBody, 1);
         sortTable(tableNoVisibleBody, 1);
 
         return widgetContent;
 
-        function generateTabLink(tabTex, tabId, mapId, isActive) {
+        function setActivePanel(setting) {
+            var activePanel = setting.activePanel;
+
+            if(activePanel){
+                switchPanel(activePanel);
+            }
+        }
+
+        function generateTabLink(tabTex, mapId, isActive) {
             var textNode = createTextNode(tabTex),
-                tabButton = createElement('a', {id: tabId, tabindex: 0, class: 'tab ' + (isActive ? 'active' : '')});
+                tabButton = createElement('a', {id: mapId + 'Tab', tabindex: 0, class: 'tab ' + (isActive ? 'active' : '')});
 
             tabButton.onclick = function () {
-                switchPanel(tabId, mapId);
+                switchPanel(mapId);
             };
 
             tabButton.appendChild(textNode);
 
             return tabButton;
+        }
 
-            function switchPanel(tabId, bodyToShow) {
-                var tabs = widgetContent.querySelectorAll('.tab'),
-                    tbodyElements = contrastResults.querySelectorAll('tbody');
+        function switchPanel(panelId) {
+            var tabs = widgetContent.querySelectorAll('.tab'),
+                tbodyElements = contrastResults.querySelectorAll('tbody');
 
-                tabs.forEach(function (tab) {
-                    if (tab.id === tabId) {
-                        tab.classList.add('active');
-                    } else {
-                        tab.classList.remove('active');
-                    }
-                });
+            tabs.forEach(function (tab) {
+                if (tab.id === panelId + 'Tab') {
+                    tab.classList.add('active');
+                } else {
+                    tab.classList.remove('active');
+                }
+            });
 
-                tbodyElements.forEach(function (tbody) {
-                    if (tbody.classList.contains(bodyToShow)) {
-                        tbody.classList.add('shown');
-                    } else {
-                        tbody.classList.remove('shown');
-                    }
-                });
-            }
+            tbodyElements.forEach(function (tbody) {
+                if (tbody.classList.contains(panelId)) {
+                    tbody.classList.add('shown');
+                } else {
+                    tbody.classList.remove('shown');
+                }
+            });
+
+            saveSettings({activePanel: panelId});
         }
 
         function keyboardHandler(event) {
@@ -389,6 +404,7 @@
         widgetParent.removeChild(widget);
         widgetParent.removeAttribute('data-contrast-checker-active');
         removeHighlightFromElements(highlightedElements)();
+        saveSettings({activePanel: defaultActivePanel});
     }
 
     function updateWidget(widgetContent) {
@@ -1125,6 +1141,14 @@
         tagName = element.tagName.toLowerCase();
 
         return ((tagName === 'img' || tagName === 'area') && element.getAttribute('alt')) || (tagName === 'input' && element.getAttribute('type') && element.getAttribute('type').toLowerCase() === 'image');
+    }
+
+    function getSettings (propertiesToGet, callback){
+        chrome.storage.local.get(propertiesToGet, callback);
+    }
+
+    function saveSettings(settings){
+        chrome.storage.local.set(settings);
     }
 
     function debounceFn(func, executeAtTheBeginning, wait) {

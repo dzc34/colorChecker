@@ -36,7 +36,6 @@ function sendActionToContrastCheckerScript(action) {
     chrome.storage
         .local.get(['contrastLevelChecker', 'autoRefreshCheck'], sendActionWithSettings);
 
-
     function sendActionWithSettings(settings) {
         message.settings = settings;
 
