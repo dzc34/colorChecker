@@ -28,7 +28,10 @@
             SPACE: 32,
             UP_ARROW: 38,
             DOWN_ARROW: 40
-        };
+        },
+        visualHelperStyle = 'display: inline-block; position: absolute; border: 10px solid; ' +
+            'border-color: transparent transparent transparent red; margin-left: -10px; margin-top: -10px; ' +
+            'transform: rotate(45deg)';
 
     if (window.hasContrastColorCheckerRun) {
         return;
@@ -73,8 +76,14 @@
             results = checkAllElementsInDocument(),
             widgetContent = createElement('div'),
             visibleElementsTab = generateTabLink('visible elements', visibleElementsPanelClass, true),
-            visibleElementsPanelDescriptionParagraph = createElement('p', {content: visibleElementsPanelDescription, class: 'description'}),
-            hiddenElementsPanelDescriptionParagraph = createElement('p', {content: hiddenElementsPanelDescription, class: 'description'}),
+            visibleElementsPanelDescriptionParagraph = createElement('p', {
+                content: visibleElementsPanelDescription,
+                class: 'description'
+            }),
+            hiddenElementsPanelDescriptionParagraph = createElement('p', {
+                content: hiddenElementsPanelDescription,
+                class: 'description'
+            }),
             hiddenElementsTab = generateTabLink('hidden elements', hiddenElementsPanelClass),
             contrastResults = createResultsContainer({
                 headers: [{content: 'Contrast', colspan: 2}, {
@@ -193,14 +202,18 @@
         function setActivePanel(setting) {
             var activePanel = setting.activePanel;
 
-            if(activePanel){
+            if (activePanel) {
                 switchPanel(activePanel);
             }
         }
 
         function generateTabLink(tabTex, mapId, isActive) {
             var textNode = createTextNode(tabTex),
-                tabButton = createElement('a', {id: mapId + 'Tab', tabindex: 0, class: 'tab ' + (isActive ? 'active' : '')});
+                tabButton = createElement('a', {
+                    id: mapId + 'Tab',
+                    tabindex: 0,
+                    class: 'tab ' + (isActive ? 'active' : '')
+                });
 
             tabButton.onclick = function () {
                 switchPanel(mapId);
@@ -287,9 +300,7 @@
                 elements.forEach(function (element) {
                     if (element.parentNode) {
                         element.parentNode.insertBefore(createElement('span', {
-                            class: 'visualHelper', style: 'display: inline-block; position: absolute;' +
-                            'border: 10px solid; border-color: transparent transparent transparent red; ' +
-                            'margin-left: -10px; margin-top: -10px; transform: rotate(45deg)'
+                            class: 'visualHelper', style: visualHelperStyle
                         }), element);
                         element.style.boxShadow = 'inset 0 0 0 1px #F00';
                     }
@@ -357,8 +368,6 @@
     function createIframeWidget(widgetContent) {
         var xmlhttp = new XMLHttpRequest(),
             baseURL = chrome.extension.getURL('html/'),
-            iframeCSS,
-            iframeHead,
             iframeWidget = createElement('iframe', {'id': contrastCheckerIframeWrapperId, 'aria-hidden': 'true'}),
             iframeWidgetContentWindow;
 
@@ -372,6 +381,8 @@
         xmlhttp.open('GET', baseURL + 'style.css', true);
 
         xmlhttp.onload = function (e) {
+            var iframeCSS, iframeHead;
+
             if (xmlhttp.readyState === 4) {
                 if (xmlhttp.status === 200) {
                     var widgetWrapper = createElement('div', {
@@ -600,7 +611,7 @@
 
         return navigationBar;
 
-        function showInfo(){
+        function showInfo() {
 
         }
     }
@@ -903,7 +914,6 @@
         elementsToExclude.forEach(function (element) {
             query += ':not(' + element + ')';
         });
-        query += ':not(tr)';
 
         elementsToCheck = document.querySelectorAll(query);
 
@@ -1161,11 +1171,11 @@
         return ((tagName === 'img' || tagName === 'area') && element.getAttribute('alt')) || (tagName === 'input' && element.getAttribute('type') && element.getAttribute('type').toLowerCase() === 'image');
     }
 
-    function getSettings (propertiesToGet, callback){
+    function getSettings(propertiesToGet, callback) {
         chrome.storage.local.get(propertiesToGet, callback);
     }
 
-    function saveSettings(settings){
+    function saveSettings(settings) {
         chrome.storage.local.set(settings);
     }
 
