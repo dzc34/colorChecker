@@ -17,11 +17,11 @@ body {
     height: 100%;
 }
 
-body:before {
-    content: 'WCAG 2.0 - Contrast checker';
+h1 {
     position: absolute;
     top: 0;
     left: 1%;
+    margin: 0;
     line-height: 30px;
     font-weight: bold;
     font-size: 14px;
@@ -30,14 +30,18 @@ body:before {
 #contrastCheckerWrapper {
     background: #FFFFFF;
     width: 98%;
-    flex-shrink: 1;
-    flex-grow: 2;
     overflow-y: auto;
     border: 1px #DDD solid;
     box-sizing: border-box;
     margin: 3px auto;
     border-top: none;
     padding-top: 10px;
+}
+
+.information,
+#contrastCheckerWrapper {
+    flex-shrink: 1;
+    flex-grow: 2;
 }
 
 #visibleElementsTab, #hiddenElementsTab {
@@ -199,7 +203,6 @@ tbody tr:focus {
 
 .contrast-value {
     padding-left: 20px;
-    padding-right: 5px;
     font-weight: bold;
 }
 
@@ -361,7 +364,32 @@ tbody tr:focus {
     background-position: center 3px !important;
 }
 
-.description{
-    margin: 5px 10px;
+.show {
+    display: block;
+}
+
+.hide {
     display: none;
+}
+.information{
+    width: 98%;
+    margin: auto;
+}
+
+.information p {
+    margin: 5px 0;
+}
+
+.information dt {
+    font-weight: bold;
+}
+
+.information dd {
+    margin-left: 15px;
+}
+
+.back-to-analysis {
+    display: block;
+    max-width: 50%;
+    margin: auto;
 }

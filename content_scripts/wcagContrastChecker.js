@@ -1,19 +1,12 @@
 (function () {
     var body, bodyParent, iframeWidget, iframeContentDocument, iframeBody, highlightedElements, settings,
         contrastLevelChecker, autoRefreshCheck,
-        navigationBar, selectorBar,
+        baseURL = chrome.extension.getURL('html/'),
         contrastCheckerIframeWrapperId = 'contrastCheckerIframeWrapper',
         contrastCheckerWrapperId = 'contrastCheckerWrapper',
         defaultActivePanel = 'visibleElements',
         visibleElementsPanelClass = 'visibleElements',
-        visibleElementsPanelDescription = 'Visible elements are the elements that don\'t use CSS properties "display" ' +
-            'or "visibility" with values "none" or "hidden" respectively. Anyway, those elements can be also outside ' +
-            'of the view-port area or hidden by other elements with higher z-index value.',
         hiddenElementsPanelClass = 'hiddenElements',
-        hiddenElementsPanelDescription = 'Hidden elements are the elements that use CSS properties "display" ' +
-            'or "visibility" with values "none" or "hidden" respectively. These elements are usually part of collapsible' +
-            'menus or panel, flyouts, etc. The page could still have other hidden elements that were not detected ' +
-            'automatically.',
         contrastColorCheckerPort = chrome.runtime.connect({name: 'port-from-cs'}),
         mutationObserverParams = {childList: true, subtree: true},
         defaultDebounceTime = 250,
@@ -31,7 +24,15 @@
         },
         visualHelperStyle = 'display: inline-block; position: absolute; border: 10px solid; ' +
             'border-color: transparent transparent transparent red; margin-left: -10px; margin-top: -10px; ' +
-            'transform: rotate(45deg)';
+            'transform: rotate(45deg)',
+        visibleElementsTabText = 'visible elements',
+        hiddenElementsTabText = 'hidden elements',
+        widgetTitleText = 'WCAG 2.0 - Contrast checker',
+        informationElementClass = 'information',
+        selectorBarClass = 'selector-bar',
+        navigationBarClass = 'navigation-bar',
+        colorToolsClass = 'color-tools';
+
 
     if (window.hasContrastColorCheckerRun) {
         return;
@@ -67,29 +68,25 @@
     });
 
     function getWidget() {
-        var tags, elements, validation, colors, elementsByValue, elementsByTag,
-            resultStrings, isVisible, contrast, fontSize, isValidAA, isValidAAA,
-            sublist, elementItem, counter,
-            rowContent, newRow, rowClass,
+        var rowContent, newRow, rowClass,
             visibleElementsCounter = 0,
             invisibleElementsCounter = 0,
             results = checkAllElementsInDocument(),
             widgetContent = createElement('div'),
-            visibleElementsTab = generateTabLink('visible elements', visibleElementsPanelClass, true),
-            visibleElementsPanelDescriptionParagraph = createElement('p', {
-                content: visibleElementsPanelDescription,
-                class: 'description'
-            }),
-            hiddenElementsPanelDescriptionParagraph = createElement('p', {
-                content: hiddenElementsPanelDescription,
-                class: 'description'
-            }),
-            hiddenElementsTab = generateTabLink('hidden elements', hiddenElementsPanelClass),
+            visibleElementsTab = generateTabLink(visibleElementsTabText, visibleElementsPanelClass, true),
+            hiddenElementsTab = generateTabLink(hiddenElementsTabText, hiddenElementsPanelClass),
             contrastResults = createResultsContainer({
-                headers: [{content: 'Contrast', colspan: 2}, {
-                    content: 'Elements',
-                    colspan: 4
-                }],
+                headers: [
+                    {
+                        content: 'Contrast',
+                        colspan: 2
+                    },
+                    {content: 'Size'},
+                    {
+                        content: 'Elements',
+                        colspan: 3
+                    }
+                ],
                 class: 'results AA',
                 tbody: ['visibleElements shown', hiddenElementsPanelClass]
             }),
@@ -97,25 +94,73 @@
             tableNoVisibleBody = contrastResults.querySelectorAll('.' + hiddenElementsPanelClass)[0];
 
         for (resultLabel in results) {
-            rowContent = [];
-            resultStrings = resultLabel.split('-');
-            isVisible = resultStrings[0] === 'true';
-            contrast = resultStrings[1];
-            fontSize = resultStrings[2];
+            rowContent = createRowContent(resultLabel);
 
-            elements = results[resultLabel].elements;
-            validation = results[resultLabel].validation;
-            colors = results[resultLabel].colors;
+            newRow = createRow(rowContent, {tabindex: 0});
+            newRow.addEventListener('focus', highlightElements(rowContent._elementsByValue, rowContent._colors.foregroundColor, rowContent._colors.backgroundColor));
+            newRow.addEventListener('blur', removeHighlightFromElements(rowContent._elementsByValue));
+            newRow.addEventListener('keydown', keyboardHandler);
+
+            if (rowContent._sublist) {
+                newRow.querySelectorAll('td:last-child')[0].appendChild(rowContent._sublist)
+            }
+
+
+            if (rowContent._isVisible) {
+                tableBody.appendChild(newRow);
+                visibleElementsCounter++;
+            } else {
+                tableNoVisibleBody.appendChild(newRow);
+                invisibleElementsCounter++;
+            }
+        }
+
+        if (!visibleElementsCounter) {
+            tableBody.appendChild(createRow(['', '', '', '', '']));
+            tableBody.appendChild(createRow([{content: 'no visible elements detected', class: 'empty', colspan: 100}]));
+        }
+
+        if (!invisibleElementsCounter) {
+            // to ensure the width of the columns doesn't change when the other tbody is hidden, we need an empty row
+            tableNoVisibleBody.appendChild(createRow(['', '', '', '', '']));
+            tableNoVisibleBody.appendChild(createRow([{
+                content: 'no hidden elements detected',
+                class: 'empty',
+                colspan: 100
+            }]));
+        }
+
+        widgetContent.appendChild(visibleElementsTab);
+        widgetContent.appendChild(hiddenElementsTab);
+        widgetContent.appendChild(contrastResults);
+
+        getSettings(['activePanel'], setActivePanel);
+
+        sortTable(tableBody, 1);
+        sortTable(tableNoVisibleBody, 1);
+
+        return widgetContent;
+
+        function createRowContent(resultString) {
+            var isValidAA, isValidAAA, elementsByTag, elementsByValue, elementItem,
+                rowContent = [],
+                resultStrings = resultString.split('-'),
+                isVisible = resultStrings[0] === 'true',
+                contrast = resultStrings[1],
+                fontSize = resultStrings[2],
+                elements = results[resultString].elements,
+                validation = results[resultString].validation,
+                colors = results[resultString].colors,
+                tags = [],
+                sublist = createElement('ul'),
+                elementItem,
+                counter = 0;
 
             if (validation) {
                 isValidAA = validation.isValidAA;
                 isValidAAA = validation.isValidAAA;
             }
 
-            sublist = createElement('ul');
-
-            counter = 0;
-            tags = [];
             elementsByValue = [];
 
             for (tag in elements) {
@@ -134,12 +179,12 @@
                 rowClass += isValidAAA ? ' validAAA' : ' invalidAAA';
                 rowContent.push({content: contrast, rowClass: rowClass, class: 'contrast-value'});
 
+                rowContent.push({content: fontSize, class: 'font-size'});
                 rowContent.push({
                     content: '',
                     class: 'sample',
                     style: colors ? 'color:' + RGBObjectToString(colors.foregroundColor) + ';background-color:' + RGBObjectToString(colors.backgroundColor) : ''
                 });
-                rowContent.push({content: fontSize, class: 'font-size'});
             }
             rowContent.push({content: counter.toString(), class: 'elements-counter'});
 
@@ -151,53 +196,19 @@
                 rowContent.push(tags.join(', '));
             }
 
+            rowContent._colors = colors;
             rowContent._initialEmptyColumn = true;
+            rowContent._isVisible = isVisible;
+            rowContent._elementsByValue = elementsByValue;
 
-            newRow = createRow(rowContent, {tabindex: 0});
-            newRow.addEventListener('focus', highlightElements(elementsByValue, colors.foregroundColor, colors.backgroundColor));
-            newRow.addEventListener('blur', removeHighlightFromElements(elementsByValue));
 
             if (sublist.childNodes.length > 1) {
-                newRow.querySelectorAll('td:last-child')[0].appendChild(sublist)
+                rowContent._sublist = sublist;
             }
 
-            newRow.onkeydown = keyboardHandler;
+            return rowContent;
 
-            if (isVisible) {
-                tableBody.appendChild(newRow);
-                visibleElementsCounter++;
-            } else {
-                tableNoVisibleBody.appendChild(newRow);
-                invisibleElementsCounter++;
-            }
         }
-
-        if (!visibleElementsCounter) {
-            tableBody.appendChild(createRow(['', '', '', '', '']));
-            tableBody.appendChild(createRow([{content: 'no visible elements detected', class: 'empty', colspan: 100}]));
-        }
-
-        if (!invisibleElementsCounter) {
-            tableNoVisibleBody.appendChild(createRow(['', '', '', '', '']));
-            tableNoVisibleBody.appendChild(createRow([{
-                content: 'no hidden elements detected',
-                class: 'empty',
-                colspan: 100
-            }]));
-        }
-
-        widgetContent.appendChild(visibleElementsTab);
-        widgetContent.appendChild(hiddenElementsTab);
-        widgetContent.appendChild(visibleElementsPanelDescriptionParagraph);
-        widgetContent.appendChild(hiddenElementsPanelDescriptionParagraph);
-        widgetContent.appendChild(contrastResults);
-
-        getSettings(['activePanel'], setActivePanel);
-
-        sortTable(tableBody, 1);
-        sortTable(tableNoVisibleBody, 1);
-
-        return widgetContent;
 
         function setActivePanel(setting) {
             var activePanel = setting.activePanel;
@@ -366,10 +377,20 @@
     }
 
     function createIframeWidget(widgetContent) {
-        var xmlhttp = new XMLHttpRequest(),
-            baseURL = chrome.extension.getURL('html/'),
+        var xmlhttpCSS = new XMLHttpRequest(),
             iframeWidget = createElement('iframe', {'id': contrastCheckerIframeWrapperId, 'aria-hidden': 'true'}),
-            iframeWidgetContentWindow;
+            iframeWidgetContentWindow,
+            widgetTitle = createElement('h1', {content: widgetTitleText});
+
+        var widgetWrapper = createElement('div', {
+                id: contrastCheckerWrapperId,
+                class: contrastLevelChecker
+            }),
+            colorTools = createColorTools(),
+            helpContent = createHelpContent(),
+            navigationBar = createWidgetControlButtons(),
+            selectorBar = createSelectorBar();
+
 
         bodyParent.insertBefore(iframeWidget, body);
         bodyParent.setAttribute('data-contrast-checker-active', 'true');
@@ -378,40 +399,32 @@
         iframeContentDocument = iframeWidgetContentWindow.document;
         iframeBody = iframeContentDocument.body;
 
-        xmlhttp.open('GET', baseURL + 'style.css', true);
+        iframeBody.appendChild(widgetTitle);
+        iframeBody.appendChild(navigationBar);
+        iframeBody.appendChild(helpContent);
+        widgetWrapper.appendChild(widgetContent);
+        iframeBody.appendChild(widgetWrapper);
+        iframeBody.appendChild(selectorBar);
+        iframeBody.appendChild(colorTools);
 
-        xmlhttp.onload = function (e) {
-            var iframeCSS, iframeHead;
+        xmlhttpCSS.open('GET', baseURL + 'style.css', true);
+        xmlhttpCSS.onload = function (e) {
+            if (xmlhttpCSS.readyState === 4) {
+                if (xmlhttpCSS.status === 200) {
+                    var iframeCSS = xmlhttpCSS.responseText,
+                        style = createElement('style', {content: iframeCSS}),
+                        base = createElement('base', {href: baseURL});
 
-            if (xmlhttp.readyState === 4) {
-                if (xmlhttp.status === 200) {
-                    var widgetWrapper = createElement('div', {
-                            id: contrastCheckerWrapperId,
-                            class: contrastLevelChecker
-                        }),
-                        colorTools = createColorTools();
 
-                    navigationBar = createWidgetControlButtons();
-                    selectorBar = createSelectorBar();
-
-                    iframeCSS = xmlhttp.responseText;
-
-                    iframeHead = '<base href="' + baseURL + '" /><style>' + iframeCSS + '</style>';
-
-                    iframeContentDocument.head.innerHTML = iframeHead;
-
-                    iframeBody.appendChild(navigationBar);
-                    widgetWrapper.appendChild(widgetContent);
-                    iframeBody.appendChild(widgetWrapper);
-                    iframeBody.appendChild(selectorBar);
-                    iframeBody.appendChild(colorTools);
+                    iframeContentDocument.head.appendChild(base);
+                    iframeContentDocument.head.appendChild(style);
                 }
                 return iframeWidget;
             }
         };
-        xmlhttp.onerror = function (e) {
+        xmlhttpCSS.onerror = function (e) {
         };
-        xmlhttp.send(null);
+        xmlhttpCSS.send(null);
     }
 
     function closeWidget() {
@@ -495,11 +508,13 @@
 
         if (parameters) {
             for (var parameterName in parameters) {
-                if (parameterName !== 'content') {
-                    newElement.setAttribute(parameterName, parameters[parameterName]);
-                } else {
+                if (parameterName === 'content') {
                     textContent = document.createTextNode(parameters[parameterName]);
                     newElement.appendChild(textContent);
+                } else if (parameterName === 'innerHTML') {
+                    newElement.innerHTML = parameters[parameterName];
+                } else {
+                    newElement.setAttribute(parameterName, parameters[parameterName]);
                 }
             }
         }
@@ -596,12 +611,12 @@
     }
 
     function createWidgetControlButtons() {
-        var navigationBar = createElement('div', {class: 'navigation-bar'}),
+        var navigationBar = createElement('div', {class: navigationBarClass}),
             infoButton = createElement('button', {content: 'info', id: 'info'}),
             refreshButton = createElement('button', {content: 'refresh', id: 'refresh'}),
             closeButton = createElement('button', {content: 'close', id: 'closer'});
 
-        infoButton.onclick = showInfo;
+        infoButton.onclick = toggleInfo;
         refreshButton.onclick = refreshWidget;
         closeButton.onclick = closeWidget;
 
@@ -610,14 +625,10 @@
         navigationBar.appendChild(closeButton);
 
         return navigationBar;
-
-        function showInfo() {
-
-        }
     }
 
     function createSelectorBar() {
-        var selectorBar = createElement('div', {class: 'selector-bar'}),
+        var selectorBar = createElement('div', {class: selectorBarClass}),
             levelSwitcherLabel = createElement('label', {content: 'WCAG level: ', for: 'levelSwitcher'}),
             levelSwitcher = createSwitcher(
                 [
@@ -682,7 +693,7 @@
     }
 
     function createColorTools() {
-        var colorTools = createElement('div', {class: 'color-tools'}),
+        var colorTools = createElement('div', {class: colorToolsClass}),
             inputWrapper = createElement('div', {class: 'color-input'}),
             foregroundInput = createInputForColor('Foreground color (hex.)', 'foreground', defaultForegroundColor),
             backgroundInput = createInputForColor('Background color (hex.)', 'background', defaultBackgroundColor),
@@ -785,6 +796,25 @@
         };
 
         return switcher;
+    }
+
+    function createHelpContent() {
+        var helpContent = createElement('div', {class: informationElementClass + ' hide'}),
+            xmlhttpHelp = new XMLHttpRequest();
+
+        xmlhttpHelp.open('GET', baseURL + 'help.html', true);
+        xmlhttpHelp.onload = function (e) {
+            if (xmlhttpHelp.readyState === 4 && xmlhttpHelp.status === 200) {
+                helpContent.innerHTML = xmlhttpHelp.responseText;
+                helpContent.querySelector('.back-to-analysis').onclick = toggleInfo;
+            }
+        };
+        xmlhttpHelp.onerror = function (e) {
+        };
+        xmlhttpHelp.send(null);
+
+
+        return helpContent;
     }
 
     function getContrastDiff(foreground, background) {
@@ -1175,8 +1205,28 @@
         chrome.storage.local.get(propertiesToGet, callback);
     }
 
-    function saveSettings(settings) {
-        chrome.storage.local.set(settings);
+    function saveSettings(settings, callback) {
+        chrome.storage.local.set(settings, callback || function () {
+        });
+    }
+
+    function toggleInfo() {
+        var informationPanel = iframeContentDocument.querySelector('.' + informationElementClass),
+            results = iframeContentDocument.getElementById(contrastCheckerWrapperId),
+            selectorPanel = iframeContentDocument.querySelector('.' + selectorBarClass),
+            colorToolsPanel = iframeContentDocument.querySelector('.' + colorToolsClass);
+
+        if (informationPanel.classList.contains('hide')) {
+            informationPanel.classList.remove('hide');
+            results.classList.add('hide');
+            selectorPanel.classList.add('hide');
+            colorToolsPanel.classList.add('hide');
+        } else {
+            informationPanel.classList.add('hide');
+            results.classList.remove('hide');
+            selectorPanel.classList.remove('hide');
+            colorToolsPanel.classList.remove('hide');
+        }
     }
 
     function debounceFn(func, executeAtTheBeginning, wait) {

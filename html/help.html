@@ -1,0 +1,42 @@
+<h2>WCAG 2.0 success criteria</h2>
+<p>The visual presentation of text and images of text has a contrast ratio of at least:</p>
+<dl>
+    <dt>Level AA - <a href="https://www.w3.org/TR/2008/REC-WCAG20-20081211/#visual-audio-contrast-contrast"
+                      target="_blank">1.4.3 Contrast (Minimum)</a></dt>
+    <dd>4.5:1 if font-size is smaller than 18 point or 14 point bold</dd>
+    <dd>3:1 if font-size is greater than 18 point or 14 point bold</dd>
+    <dt>Level AAA - <a href="https://www.w3.org/TR/2008/REC-WCAG20-20081211/#visual-audio-contrast7"
+                       target="_blank">1.4.6 Contrast (Enhanced)</a></dt>
+    <dd>7:1 if font-size is smaller than 18 point or 14 point bold</dd>
+    <dd>4.5:1 if font-size is greater than 18 point or 14 point bold</dd>
+</dl>
+<p>The success criteria don't apply for <strong>incidental text</strong> (text or images of text that are part
+    of an inactive user interface component, that are pure decoration, that are not visible to anyone, or that are part
+    of a picture that contains significant other visual content) or <strong>logotypes</strong>.</p>
+
+<h2>WCAG Contrast Checker</h2>
+<p>It is a browser extension that analyses the contrast between the foreground and the background of all elements in the
+    page. It identifies the computed colors and also considers the opacity of the background in order to determine the
+    visual value.</p>
+<p>The extension does not consider images. This means that if the element is an image, the detected color for the
+    foreground would be the one that its alternative text would have, and if if the element includes and image as
+    background, the background color would be the one that it has defined without considering the image.</p>
+
+<h3>Visible and Hidden elements</h3>
+<p><strong>Visible elements</strong> are the elements that don't use CSS properties "display"
+    or "visibility" with values "none" or "hidden" respectively. Because there could be other ways for hiding elements,
+    this list could include some that are also hidden or outside of the view-port area.</p>
+<p><strong>Hidden elements</strong> are the elements that use CSS properties "display"
+    or "visibility" with values "none" or "hidden" respectively. These elements are usually part of collapsible
+    menus, panels, flyouts, etc. The page could still have other hidden elements that were not detected
+    automatically.</p>
+
+<h3>Refresh on DOM updates</h3>
+<p>The analysis can be performed to be executed on every DOM modification (additions or remove of DOM elements) or
+    on-demand. If it is executed automatically when de DOM is modified, it includes a debouncing time in order to
+    prevent unneeded repetitions that could affect to the performance. When this feature is deactivated, it is possible
+    to update the analysis manually by using the button "refresh".</p>
+
+<p>
+    <button class="back-to-analysis">Return to the analysis</button>
+</p>
