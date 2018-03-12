@@ -942,7 +942,7 @@
         elementsToCheck.forEach(function (element) {
             var colorEvaluation;
 
-            if (hasText(element) || (getValue(element) && element.getAttribute('type') !== 'hidden' && element.getAttribute('type') !== 'color')) {
+            if (hasText(element) || (getInputValue(element) && element.getAttribute('type') !== 'hidden' && element.getAttribute('type') !== 'color')) {
                 colorEvaluation = evaluateColorContrastFromElement(element);
                 tagName = element.tagName.toLowerCase();
                 identifier = colorEvaluation.isVisible + '-' + colorEvaluation.contrast + '-' + colorEvaluation.textType;
@@ -1090,17 +1090,17 @@
         } : null;
     }
 
-    function RGBStringToHex(RGBColor) {
-        var RGBValues = RGBStringToObject(RGBColor);
+    function RGBStringToHex(RGBColorString) {
+        var RGBColor = RGBStringToObject(RGBColorString);
 
-        return '#' + decToHex(RGBValues.r) + decToHex(RGBValues.g) + decToHex(RGBValues.b);
+        return RGBToHex(RGBColor);
     }
 
     function RGBToHex(RGBColor) {
         return '#' + decToHex(RGBColor.r) + decToHex(RGBColor.g) + decToHex(RGBColor.b);
     }
 
-    function getValue(input) {
+    function getInputValue(input) {
         return input.value;
     }
 
@@ -1197,17 +1197,19 @@
 
             tabs.forEach(function (tab) {
                 if (tab.id === panelClass + 'Tab') {
-                    tab.classList.add('active');
+                    addClassToElements('active', [tab]);
                 } else {
-                    tab.classList.remove('active');
+                    removeClassToElements('active', [tab]);
                 }
             });
 
             tbodyElements.forEach(function (tbody) {
-                if (tbody.classList.contains(panelClass)) {
-                    tbody.classList.add('shown');
+                var classList = tbody.classList;
+
+                if (classList.contains(panelClass)) {
+                    addClassToElements('shown', [tbody]);
                 } else {
-                    tbody.classList.remove('shown');
+                    removeClassToElements('shown', [tbody]);
                 }
             });
 
@@ -1232,18 +1234,24 @@
             colorToolsPanel = iframeContentDocument.querySelector('.' + colorToolsClass);
 
         if (informationPanel.classList.contains('hide')) {
-            informationPanel.classList.remove('hide');
-            tabsBar.classList.add('hide');
-            results.classList.add('hide');
-            selectorPanel.classList.add('hide');
-            colorToolsPanel.classList.add('hide');
+            removeClassToElements('hide', [informationPanel]);
+            addClassToElements('hide', [tabsBar, results, selectorPanel,colorToolsPanel]);
         } else {
-            informationPanel.classList.add('hide');
-            tabsBar.classList.remove('hide');
-            results.classList.remove('hide');
-            selectorPanel.classList.remove('hide');
-            colorToolsPanel.classList.remove('hide');
+            addClassToElements('hide', [informationPanel]);
+            removeClassToElements('hide', [tabsBar, results, selectorPanel,colorToolsPanel])
         }
+    }
+
+    function addClassToElements(classValue, elements){
+        elements.forEach(function(element){
+            element.classList.add(classValue);
+        });
+    }
+
+    function removeClassToElements(classValue, elements){
+        elements.forEach(function(element){
+            element.classList.remove(classValue);
+        });
     }
 
     function debounceFn(func, executeAtTheBeginning, wait) {
