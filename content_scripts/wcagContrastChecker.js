@@ -54,18 +54,22 @@
         let colorContrastWidget,
             previous = document.getElementById(contrastCheckerIframeWrapperId);
 
-
-        if (previous) {
-            if (message.action === 'toggle') {
-                closeWidget();
-            } else if (message.action === 'update') {
+        if (message.action !== 'screenCapture') {
+            if (previous) {
+                if (message.action === 'toggle') {
+                    closeWidget();
+                } else if (message.action === 'update') {
+                    colorContrastWidget = getWidget();
+                    updateWidget(colorContrastWidget);
+                }
+            } else if (message.action === 'toggle') {
                 colorContrastWidget = getWidget();
-                updateWidget(colorContrastWidget);
+                openWidget(colorContrastWidget);
             }
-        } else if (message.action === 'toggle') {
-            colorContrastWidget = getWidget();
-            openWidget(colorContrastWidget);
+        } else {
+            body.appendChild(createElement('img', {src: message.data}))
         }
+
     });
 
     function getWidget() {
@@ -251,7 +255,6 @@
     function refreshWidget() {
         var colorContrastWidget = getWidget();
         updateWidget(colorContrastWidget);
-//        sendMessageToBackgroundScript({action: 'update'});
     }
 
     function sendMessageToBackgroundScript(messageObject) {
@@ -578,12 +581,20 @@
     function createWidgetControlButtons() {
         var navigationBar = createElement('div', {class: navigationBarClass}),
             infoButton = createElement('button', {content: 'info', id: 'info', events: {click: toggleInfo}}),
-            closeButton = createElement('button', {content: 'close', id: 'closer', events: {click: closeWidget}});
+            closeButton = createElement('button', {content: 'close', id: 'closer', events: {click: closeWidget}}),
+            canvas = createElement('button', {content: 'canvas', id: 'canvas', events: {click: canvasImg}});
 
+        navigationBar.appendChild(canvas);
         navigationBar.appendChild(infoButton);
         navigationBar.appendChild(closeButton);
 
         return navigationBar;
+
+        function canvasImg() {
+            sendMessageToBackgroundScript({
+                action: 'screenCapture'
+            });
+        }
     }
 
     function createTabsBar() {
@@ -1235,21 +1246,21 @@
 
         if (informationPanel.classList.contains('hide')) {
             removeClassToElements('hide', [informationPanel]);
-            addClassToElements('hide', [tabsBar, results, selectorPanel,colorToolsPanel]);
+            addClassToElements('hide', [tabsBar, results, selectorPanel, colorToolsPanel]);
         } else {
             addClassToElements('hide', [informationPanel]);
-            removeClassToElements('hide', [tabsBar, results, selectorPanel,colorToolsPanel])
+            removeClassToElements('hide', [tabsBar, results, selectorPanel, colorToolsPanel])
         }
     }
 
-    function addClassToElements(classValue, elements){
-        elements.forEach(function(element){
+    function addClassToElements(classValue, elements) {
+        elements.forEach(function (element) {
             element.classList.add(classValue);
         });
     }
 
-    function removeClassToElements(classValue, elements){
-        elements.forEach(function(element){
+    function removeClassToElements(classValue, elements) {
+        elements.forEach(function (element) {
             element.classList.remove(classValue);
         });
     }

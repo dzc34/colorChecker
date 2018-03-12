@@ -16,6 +16,38 @@ function injectWCAGContrastScript(tab) {
         .insertCSS({file: 'content_scripts/wcagContrastChecker.css'});
 }
 
+
+function capture() {
+    try {
+        chrome.tabs.captureVisibleTab({
+            format: 'png'
+        }, doCapture);
+    } catch (e) {
+        chrome.tabs.captureVisibleTab(null, doCapture);
+    }
+};
+
+function doCapture(data) {
+    if (data) {
+        sendMessage({
+            action: 'screenCapture',
+            data: data
+        }, function () {
+        });
+    } else {
+        var msg = 'Did not receive data from captureVisibleTab.';
+        sendMessage({
+            action: 'error',
+            msg: msg
+        }, function () {
+        });
+    }
+}
+
+function sendMessage(message, callback) {
+    chrome.tabs.sendMessage(tabId, message, callback);
+}
+
 function connected(portFromCS) {
     portFromCS.onMessage.addListener(function (message) {
         if (message.action === 'update') {
@@ -26,6 +58,8 @@ function connected(portFromCS) {
             openOptionsPage.then(reportSuccess, reportError);
         } else if (message.action === 'saveSettings' && message.settings) {
             chrome.storage.local.set(message.settings);
+        } else if (message.action === 'screenCapture') {
+            capture();
         }
     });
 }
