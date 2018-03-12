@@ -399,14 +399,6 @@
         iframeContentDocument = iframeWidgetContentWindow.document;
         iframeBody = iframeContentDocument.body;
 
-        iframeBody.appendChild(widgetTitle);
-        iframeBody.appendChild(navigationBar);
-        iframeBody.appendChild(helpContent);
-        widgetWrapper.appendChild(widgetContent);
-        iframeBody.appendChild(widgetWrapper);
-        iframeBody.appendChild(selectorBar);
-        iframeBody.appendChild(colorTools);
-
         xmlhttpCSS.open('GET', baseURL + 'style.css', true);
         xmlhttpCSS.onload = function (e) {
             if (xmlhttpCSS.readyState === 4) {
@@ -419,6 +411,15 @@
                     iframeContentDocument.head.appendChild(base);
                     iframeContentDocument.head.appendChild(style);
                 }
+
+                iframeBody.appendChild(widgetTitle);
+                iframeBody.appendChild(navigationBar);
+                widgetWrapper.appendChild(widgetContent);
+                iframeBody.appendChild(widgetWrapper);
+                iframeBody.appendChild(selectorBar);
+                iframeBody.appendChild(colorTools);
+                iframeBody.appendChild(helpContent);
+
                 return iframeWidget;
             }
         };
@@ -613,14 +614,11 @@
     function createWidgetControlButtons() {
         var navigationBar = createElement('div', {class: navigationBarClass}),
             infoButton = createElement('button', {content: 'info', id: 'info'}),
-            refreshButton = createElement('button', {content: 'refresh', id: 'refresh'}),
             closeButton = createElement('button', {content: 'close', id: 'closer'});
 
         infoButton.onclick = toggleInfo;
-        refreshButton.onclick = refreshWidget;
         closeButton.onclick = closeWidget;
 
-        navigationBar.appendChild(refreshButton);
         navigationBar.appendChild(infoButton);
         navigationBar.appendChild(closeButton);
 
@@ -629,6 +627,7 @@
 
     function createSelectorBar() {
         var selectorBar = createElement('div', {class: selectorBarClass}),
+            refreshButton = createElement('button', {innerHTML: '<span>refresh results</span>', class: 'refresh-button'}),
             levelSwitcherLabel = createElement('label', {content: 'WCAG level: ', for: 'levelSwitcher'}),
             levelSwitcher = createSwitcher(
                 [
@@ -651,6 +650,9 @@
                 'refreshSwitcher',
                 switchAutoRefresh);
 
+        refreshButton.onclick = refreshWidget;
+
+        selectorBar.appendChild(refreshButton);
         selectorBar.appendChild(levelSwitcherLabel);
         levelSwitcherLabel.appendChild(levelSwitcher);
         selectorBar.appendChild(refreshSwitcherLabel);

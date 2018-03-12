@@ -30,7 +30,6 @@ h1 {
 #contrastCheckerWrapper {
     background: #FFFFFF;
     width: 98%;
-    overflow-y: auto;
     border: 1px #DDD solid;
     box-sizing: border-box;
     margin: 3px auto;
@@ -42,6 +41,7 @@ h1 {
 #contrastCheckerWrapper {
     flex-shrink: 1;
     flex-grow: 2;
+    overflow-y: auto;
 }
 
 #visibleElementsTab, #hiddenElementsTab {
@@ -240,14 +240,11 @@ tbody tr:focus {
 }
 
 .selector-bar label {
-    float: right;
-    width: 98%;
-    clear: both;
-    margin: 0 auto 5px;
+    display: inline-block;
+    margin: 8px 5px;
 }
 
 #info,
-#refresh,
 #closer {
     display: inline-block;
     margin: 2px;
@@ -261,8 +258,6 @@ tbody tr:focus {
 
 #info:hover,
 #info:focus,
-#refresh:hover,
-#refresh:focus,
 #closer:hover,
 #closer:focus {
     opacity: .9;
@@ -270,10 +265,6 @@ tbody tr:focus {
 
 #info {
     background: center/contain no-repeat url(./icons/info.png);
-}
-
-#refresh {
-    background: center/contain no-repeat url(./icons/refresh.png);
 }
 
 #closer {
@@ -369,11 +360,22 @@ tbody tr:focus {
 }
 
 .hide {
-    display: none;
+    display: none !important;
 }
 .information{
     width: 98%;
     margin: auto;
+    display: flex;
+    flex-direction: column;
+    background: #f5f5f5;
+}
+
+.information .text-content {
+    flex-shrink: 1;
+    flex-grow: 2;
+    overflow-y: auto;
+    margin: 8px 0;
+    background: #FFFFFF;
 }
 
 .information p {
@@ -388,8 +390,24 @@ tbody tr:focus {
     margin-left: 15px;
 }
 
-.back-to-analysis {
+.refresh-button,
+.back-to-analysis{
     display: block;
-    max-width: 50%;
-    margin: auto;
+    width: 100%;
+    line-height: 25px;
+}
+
+.navigation-content{
+    padding-bottom: 8px;
+}
+
+.refresh-button span,
+.back-to-analysis span{
+    background: left center no-repeat url(./icons/refresh.png);
+    background-size: contain;
+    padding-left: 20px;
+}
+
+.back-to-analysis span{
+    background-image: url(./icons/return.png);
 }
