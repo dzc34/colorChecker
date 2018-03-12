@@ -43,7 +43,7 @@
     body = document.body;
     bodyParent = body.parentNode;
 
-    let bodyMutationEndingObserver, onEndingDOMChangeCallback;
+    var bodyMutationEndingObserver, onEndingDOMChangeCallback;
 
     chrome.runtime.onMessage.addListener((message) => {
         settings = Object.assign({}, defaultSettings, message.settings);
@@ -240,7 +240,9 @@
     }
 
     function refreshWidget() {
-        sendMessageToBackgroundScript({action: 'update'});
+        var colorContrastWidget = getWidget();
+        updateWidget(colorContrastWidget);
+//        sendMessageToBackgroundScript({action: 'update'});
     }
 
     function sendMessageToBackgroundScript(messageObject) {
@@ -406,7 +408,7 @@
         if (bodyMutationEndingObserver) {
             bodyMutationEndingObserver.disconnect();
         }
-        if (autoRefreshCheck) {
+        if (autoRefreshCheck === 'on') {
             setMutationObserver();
         }
     }
