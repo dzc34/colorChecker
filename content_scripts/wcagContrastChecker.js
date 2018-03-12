@@ -95,10 +95,14 @@
         for (resultLabel in results) {
             rowContent = createRowContent(resultLabel);
 
-            newRow = createRow(rowContent, {tabindex: 0});
-            newRow.addEventListener('focus', highlightElements(rowContent._elementsByValue, rowContent._colors.foregroundColor, rowContent._colors.backgroundColor));
-            newRow.addEventListener('blur', removeHighlightFromElements(rowContent._elementsByValue));
-            newRow.addEventListener('keydown', keyboardHandler);
+            newRow = createRow(rowContent, {
+                tabindex: 0,
+                events: {
+                    focus: highlightElements(rowContent._elementsByValue, rowContent._colors.foregroundColor, rowContent._colors.backgroundColor),
+                    blur: removeHighlightFromElements(rowContent._elementsByValue),
+                    keydown: keyboardHandler
+                }
+            });
 
             if (rowContent._sublist) {
                 newRow.querySelectorAll('td:last-child')[0].appendChild(rowContent._sublist)
@@ -165,9 +169,14 @@
                 elementsByTag = elements[tag];
                 elementsByValue = elementsByValue.concat(elementsByTag);
                 counter += elementsByTag.length;
-                elementItem = createElement('li', {content: elementsByTag.length + ' ' + tag, tabindex: 0});
-                elementItem.addEventListener('focus', highlightElements(elementsByTag, colors.foregroundColor, colors.backgroundColor));
-                elementItem.addEventListener('blur', removeHighlightFromElements(elementsByTag));
+                elementItem = createElement('li', {
+                    content: elementsByTag.length + ' ' + tag,
+                    tabindex: 0,
+                    events: {
+                        focus: highlightElements(elementsByTag, colors.foregroundColor, colors.backgroundColor),
+                        blur: removeHighlightFromElements(elementsByTag)
+                    }
+                });
                 sublist.appendChild(elementItem)
             }
 
@@ -466,6 +475,10 @@
                     newElement.appendChild(textContent);
                 } else if (parameterName === 'innerHTML') {
                     newElement.innerHTML = parameters[parameterName];
+                } else if (parameterName === 'events') {
+                    for (var event in parameters[parameterName]) {
+                        newElement.addEventListener(event, parameters[parameterName][event]);
+                    }
                 } else {
                     newElement.setAttribute(parameterName, parameters[parameterName]);
                 }
@@ -488,7 +501,6 @@
 
         config.headers.forEach(function (header, index) {
             headerCell = createElement('th', typeof header === 'string' ? {content: header} : header);
-            headerCell.onclick = sort(table, index);
             headerRow.appendChild(headerCell);
         });
 
@@ -508,12 +520,6 @@
         }
 
         return table;
-
-        function sort(table, index) {
-            return function () {
-                sortTable(table.querySelectorAll('tbody')[0], index)
-            }
-        }
     }
 
     function createRow(contentArray, parameters) {
@@ -522,8 +528,7 @@
 
         if (contentArray._initialEmptyColumn) {
             if (contentArray._expandable) {
-                collapser = createElement('span', {class: 'collapser'});
-                collapser.addEventListener('click', toggle(row));
+                collapser = createElement('span', {class: 'collapser', events: {click: toggle(row)}});
                 cell = createElement('td');
                 cell.appendChild(collapser);
                 row.appendChild(cell);
@@ -550,7 +555,14 @@
 
         if (parameters) {
             for (var parameterName in parameters) {
-                row.setAttribute(parameterName, parameters[parameterName]);
+                if (parameterName !== 'events') {
+                    row.setAttribute(parameterName, parameters[parameterName]);
+                } else {
+                    for (var event in parameters[parameterName]) {
+                        row.addEventListener(event, parameters[parameterName][event]);
+                    }
+
+                }
             }
         }
 
@@ -565,11 +577,8 @@
 
     function createWidgetControlButtons() {
         var navigationBar = createElement('div', {class: navigationBarClass}),
-            infoButton = createElement('button', {content: 'info', id: 'info'}),
-            closeButton = createElement('button', {content: 'close', id: 'closer'});
-
-        infoButton.onclick = toggleInfo;
-        closeButton.onclick = closeWidget;
+            infoButton = createElement('button', {content: 'info', id: 'info', events: {click: toggleInfo}}),
+            closeButton = createElement('button', {content: 'close', id: 'closer', events: {click: closeWidget}});
 
         navigationBar.appendChild(infoButton);
         navigationBar.appendChild(closeButton);
@@ -586,13 +595,30 @@
         tabsBar.appendChild(hiddenElementsTab);
 
         return tabsBar;
+
+        function generateTabLink(tabTex, mapId, isActive) {
+            var textNode = createTextNode(tabTex),
+                tabButton = createElement('a', {
+                    id: mapId + 'Tab',
+                    tabindex: 0,
+                    class: 'tab ' + (isActive ? 'active' : ''),
+                    events: {
+                        click: switchPanel(mapId)
+                    }
+                });
+
+            tabButton.appendChild(textNode);
+
+            return tabButton;
+        }
     }
 
     function createSelectorBar() {
         var selectorBar = createElement('div', {class: selectorBarClass}),
             refreshButton = createElement('button', {
                 innerHTML: '<span>refresh results</span>',
-                class: 'refresh-button'
+                class: 'refresh-button',
+                events: {click: refreshWidget}
             }),
             levelSwitcherLabel = createElement('label', {content: 'WCAG level: ', for: 'levelSwitcher'}),
             levelSwitcher = createSwitcher(
@@ -615,8 +641,6 @@
                 autoRefreshCheck,
                 'refreshSwitcher',
                 switchAutoRefresh);
-
-        refreshButton.onclick = refreshWidget;
 
         selectorBar.appendChild(refreshButton);
         selectorBar.appendChild(levelSwitcherLabel);
@@ -876,14 +900,14 @@
             backgroundColor = getComputedStyle.getPropertyValue('background-color'),
             RGBValues = RGBStringToObject(backgroundColor),
             alpha = RGBValues.o,
-            isTransparent = alpha === 0,
+            isTransparent = alpha === 0 || backgroundColor === 'transparent' || !backgroundColor,
             isVisible = isElementVisible(element);
 
-        if (isTransparent || backgroundColor === 'transparent' || !backgroundColor) {
+        if (isTransparent) {
             if (element.parentNode.tagName.toLowerCase() !== 'body') {
-                return backgroundFromSelfOrAncestor(element.parentNode);
+                RGBBackgroundColorObject = backgroundFromSelfOrAncestor(element.parentNode);
             } else {
-                return {r: 255, g: 255, b: 255, o: alpha, isVisible: isVisible};
+                RGBBackgroundColorObject = {r: 255, g: 255, b: 255, o: alpha};
             }
         } else if (alpha === 1) {
             RGBBackgroundColorObject = RGBStringToObject(backgroundColor);
@@ -891,7 +915,7 @@
             if (element.parentNode.tagName.toLowerCase() !== 'body') {
                 RGBBackgroundColorObject = getAdjustedColorWithOpacity(RGBStringToObject(backgroundColor), element.parentNode);
             } else {
-                return {r: 255, g: 255, b: 255, o: alpha, isVisible: isVisible};
+                RGBBackgroundColorObject = {r: 255, g: 255, b: 255, o: alpha};
             }
         }
 
@@ -921,33 +945,22 @@
             if (hasText(element) || (getValue(element) && element.getAttribute('type') !== 'hidden' && element.getAttribute('type') !== 'color')) {
                 colorEvaluation = evaluateColorContrastFromElement(element);
                 tagName = element.tagName.toLowerCase();
-                if (colorEvaluation.contrast) {
-                    identifier = colorEvaluation.isVisible + '-' + colorEvaluation.contrast + '-' + colorEvaluation.textType;
+                identifier = colorEvaluation.isVisible + '-' + colorEvaluation.contrast + '-' + colorEvaluation.textType;
 
-                    if (!results[identifier]) {
-                        results[identifier] = {elements: {}, validation: {}, colors: {}};
-                        results[identifier].elements[tagName] = [];
-                    } else if (!results[identifier].elements[tagName]) {
-                        results[identifier].elements[tagName] = [];
-                    }
-
-                    results[identifier].elements[tagName].push(element);
-
-                    results[identifier].validation.isValidAA = colorEvaluation.isValidAA;
-                    results[identifier].validation.isValidAAA = colorEvaluation.isValidAAA;
-
-                    results[identifier].colors.foregroundColor = colorEvaluation.foregroundColor;
-                    results[identifier].colors.backgroundColor = colorEvaluation.backgroundColor;
-                } else {
-                    if (!results['not_tested']) {
-                        results['not_tested'] = {elements: {}};
-                        results['not_tested'].elements[tagName] = [];
-                    } else if (!results['not_tested'].elements[tagName]) {
-                        results['not_tested'].elements[tagName] = [];
-                    }
-
-                    results['not_tested'].elements[tagName].push(element);
+                if (!results[identifier]) {
+                    results[identifier] = {elements: {}, validation: {}, colors: {}};
+                    results[identifier].elements[tagName] = [];
+                } else if (!results[identifier].elements[tagName]) {
+                    results[identifier].elements[tagName] = [];
                 }
+
+                results[identifier].elements[tagName].push(element);
+
+                results[identifier].validation.isValidAA = colorEvaluation.isValidAA;
+                results[identifier].validation.isValidAAA = colorEvaluation.isValidAAA;
+
+                results[identifier].colors.foregroundColor = colorEvaluation.foregroundColor;
+                results[identifier].colors.backgroundColor = colorEvaluation.backgroundColor;
             }
         });
 
@@ -1173,48 +1186,33 @@
         var activePanel = setting.activePanel;
 
         if (activePanel) {
-            switchPanel(activePanel);
+            switchPanel(activePanel)();
         }
     }
 
-    function generateTabLink(tabTex, mapId, isActive) {
-        var textNode = createTextNode(tabTex),
-            tabButton = createElement('a', {
-                id: mapId + 'Tab',
-                tabindex: 0,
-                class: 'tab ' + (isActive ? 'active' : '')
+    function switchPanel(panelClass) {
+        return function () {
+            var tabs = iframeBody.querySelectorAll('.tab'),
+                tbodyElements = iframeBody.querySelectorAll('.results-container tbody');
+
+            tabs.forEach(function (tab) {
+                if (tab.id === panelClass + 'Tab') {
+                    tab.classList.add('active');
+                } else {
+                    tab.classList.remove('active');
+                }
             });
 
-        tabButton.onclick = function () {
-            switchPanel(mapId);
-        };
+            tbodyElements.forEach(function (tbody) {
+                if (tbody.classList.contains(panelClass)) {
+                    tbody.classList.add('shown');
+                } else {
+                    tbody.classList.remove('shown');
+                }
+            });
 
-        tabButton.appendChild(textNode);
-
-        return tabButton;
-    }
-
-    function switchPanel(panelClass) {
-        var tabs = iframeBody.querySelectorAll('.tab'),
-            tbodyElements = iframeBody.querySelectorAll('.results-container tbody');
-
-        tabs.forEach(function (tab) {
-            if (tab.id === panelClass + 'Tab') {
-                tab.classList.add('active');
-            } else {
-                tab.classList.remove('active');
-            }
-        });
-
-        tbodyElements.forEach(function (tbody) {
-            if (tbody.classList.contains(panelClass)) {
-                tbody.classList.add('shown');
-            } else {
-                tbody.classList.remove('shown');
-            }
-        });
-
-        saveSettings({activePanel: panelClass});
+            saveSettings({activePanel: panelClass});
+        }
     }
 
     function getSettings(propertiesToGet, callback) {
