@@ -25,11 +25,31 @@ h1 {
     line-height: 30px;
     font-weight: bold;
     font-size: 14px;
+    background: left center no-repeat url(./icons/icon_small.png);
+    background-size: contain;
+    padding-left: 33px;
 }
+
+h2 {
+    background-color: #C5C5C5;
+    font-size: 1.2em;
+    margin: 0;
+    padding: 4px 0;
+    text-indent: 5px;
+}
+
+h3 {
+    text-indent: 5px;
+    font-size: 1.1em;
+    border-bottom: 1px solid #C5C5C5;
+    margin-bottom: 0;
+}
+
 .tabs-bar {
     width: 98%;
     margin: 5px auto 0;
 }
+
 #contrastCheckerWrapper {
     width: 98%;
     border: 1px #DDD solid;
@@ -46,7 +66,7 @@ h1 {
     overflow-y: auto;
 }
 
-#contrastCheckerWrapper > div{
+#contrastCheckerWrapper > div {
     margin-top: -1px;
 }
 
@@ -367,28 +387,46 @@ tbody tr:focus {
 .hide {
     display: none !important;
 }
-.information{
-    width: 98%;
+
+.information {
     margin: auto;
     display: flex;
     flex-direction: column;
     background: #f5f5f5;
+    box-sizing: border-box;
 }
 
 .information .text-content {
     flex-shrink: 1;
     flex-grow: 2;
     overflow-y: auto;
-    margin: 8px 0;
+    margin: 0 0 8px;
     background: #FFFFFF;
+    font-size: .9em;
 }
 
-.information p {
-    margin: 5px 0;
+.information p,
+.information dl {
+    width: 98%;
+    margin: 12px auto;
+    padding: 0 4px;
+    line-height: 1.5;
+    word-spacing: 4px;
+    box-sizing: border-box;
+}
+
+.information h2 + p,
+.information h3 + p {
+    margin-top: 8px;
 }
 
 .information dt {
+    margin: 12px 0 4px;
     font-weight: bold;
+}
+
+.information dt a {
+    font-weight: normal;
 }
 
 .information dd {
@@ -396,23 +434,23 @@ tbody tr:focus {
 }
 
 .refresh-button,
-.back-to-analysis{
+.back-to-analysis {
     display: block;
     width: 100%;
     line-height: 25px;
 }
 
-.navigation-content{
+.navigation-content {
     padding-bottom: 8px;
 }
 
 .refresh-button span,
-.back-to-analysis span{
+.back-to-analysis span {
     background: left center no-repeat url(./icons/refresh.png);
     background-size: contain;
     padding-left: 20px;
 }
 
-.back-to-analysis span{
+.back-to-analysis span {
     background-image: url(./icons/return.png);
 }
