@@ -26,15 +26,17 @@ h1 {
     font-weight: bold;
     font-size: 14px;
 }
-
+.tabs-bar {
+    width: 98%;
+    margin: 5px auto 0;
+}
 #contrastCheckerWrapper {
-    background: #FFFFFF;
     width: 98%;
     border: 1px #DDD solid;
-    box-sizing: border-box;
-    margin: 3px auto;
     border-top: none;
-    padding-top: 10px;
+    box-sizing: border-box;
+    margin: 0 auto 3px;
+    background: #FFF;
 }
 
 .information,
@@ -42,6 +44,10 @@ h1 {
     flex-shrink: 1;
     flex-grow: 2;
     overflow-y: auto;
+}
+
+#contrastCheckerWrapper > div{
+    margin-top: -1px;
 }
 
 #visibleElementsTab, #hiddenElementsTab {
@@ -297,7 +303,6 @@ tbody tr:focus {
     background: #FFFFFF;
     width: 98%;
     border: 1px #DDD inset;
-    border-top: none;
     box-sizing: border-box;
     margin: 3px auto;
 }

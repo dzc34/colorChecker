@@ -29,6 +29,7 @@
         hiddenElementsTabText = 'hidden elements',
         widgetTitleText = 'WCAG 2.0 - Contrast checker',
         informationElementClass = 'information',
+        tabsBarClass = 'tabs-bar',
         selectorBarClass = 'selector-bar',
         navigationBarClass = 'navigation-bar',
         colorToolsClass = 'color-tools';
@@ -73,8 +74,6 @@
             invisibleElementsCounter = 0,
             results = checkAllElementsInDocument(),
             widgetContent = createElement('div'),
-            visibleElementsTab = generateTabLink(visibleElementsTabText, visibleElementsPanelClass, true),
-            hiddenElementsTab = generateTabLink(hiddenElementsTabText, hiddenElementsPanelClass),
             contrastResults = createResultsContainer({
                 headers: [
                     {
@@ -130,8 +129,6 @@
             }]));
         }
 
-        widgetContent.appendChild(visibleElementsTab);
-        widgetContent.appendChild(hiddenElementsTab);
         widgetContent.appendChild(contrastResults);
 
         getSettings(['activePanel'], setActivePanel);
@@ -208,54 +205,6 @@
 
             return rowContent;
 
-        }
-
-        function setActivePanel(setting) {
-            var activePanel = setting.activePanel;
-
-            if (activePanel) {
-                switchPanel(activePanel);
-            }
-        }
-
-        function generateTabLink(tabTex, mapId, isActive) {
-            var textNode = createTextNode(tabTex),
-                tabButton = createElement('a', {
-                    id: mapId + 'Tab',
-                    tabindex: 0,
-                    class: 'tab ' + (isActive ? 'active' : '')
-                });
-
-            tabButton.onclick = function () {
-                switchPanel(mapId);
-            };
-
-            tabButton.appendChild(textNode);
-
-            return tabButton;
-        }
-
-        function switchPanel(panelClass) {
-            var tabs = widgetContent.querySelectorAll('.tab'),
-                tbodyElements = contrastResults.querySelectorAll('tbody');
-
-            tabs.forEach(function (tab) {
-                if (tab.id === panelClass + 'Tab') {
-                    tab.classList.add('active');
-                } else {
-                    tab.classList.remove('active');
-                }
-            });
-
-            tbodyElements.forEach(function (tbody) {
-                if (tbody.classList.contains(panelClass)) {
-                    tbody.classList.add('shown');
-                } else {
-                    tbody.classList.remove('shown');
-                }
-            });
-
-            saveSettings({activePanel: panelClass});
         }
 
         function keyboardHandler(event) {
@@ -389,8 +338,8 @@
             colorTools = createColorTools(),
             helpContent = createHelpContent(),
             navigationBar = createWidgetControlButtons(),
-            selectorBar = createSelectorBar();
-
+            selectorBar = createSelectorBar(),
+            tabsBar = createTabsBar();
 
         bodyParent.insertBefore(iframeWidget, body);
         bodyParent.setAttribute('data-contrast-checker-active', 'true');
@@ -414,6 +363,7 @@
 
                 iframeBody.appendChild(widgetTitle);
                 iframeBody.appendChild(navigationBar);
+                iframeBody.appendChild(tabsBar);
                 widgetWrapper.appendChild(widgetContent);
                 iframeBody.appendChild(widgetWrapper);
                 iframeBody.appendChild(selectorBar);
@@ -625,9 +575,23 @@
         return navigationBar;
     }
 
+    function createTabsBar() {
+        var tabsBar = createElement('div', {class: tabsBarClass}),
+            visibleElementsTab = generateTabLink(visibleElementsTabText, visibleElementsPanelClass, true),
+            hiddenElementsTab = generateTabLink(hiddenElementsTabText, hiddenElementsPanelClass);
+
+        tabsBar.appendChild(visibleElementsTab);
+        tabsBar.appendChild(hiddenElementsTab);
+
+        return tabsBar;
+    }
+
     function createSelectorBar() {
         var selectorBar = createElement('div', {class: selectorBarClass}),
-            refreshButton = createElement('button', {innerHTML: '<span>refresh results</span>', class: 'refresh-button'}),
+            refreshButton = createElement('button', {
+                innerHTML: '<span>refresh results</span>',
+                class: 'refresh-button'
+            }),
             levelSwitcherLabel = createElement('label', {content: 'WCAG level: ', for: 'levelSwitcher'}),
             levelSwitcher = createSwitcher(
                 [
@@ -1203,6 +1167,54 @@
         return ((tagName === 'img' || tagName === 'area') && element.getAttribute('alt')) || (tagName === 'input' && element.getAttribute('type') && element.getAttribute('type').toLowerCase() === 'image');
     }
 
+    function setActivePanel(setting) {
+        var activePanel = setting.activePanel;
+
+        if (activePanel) {
+            switchPanel(activePanel);
+        }
+    }
+
+    function generateTabLink(tabTex, mapId, isActive) {
+        var textNode = createTextNode(tabTex),
+            tabButton = createElement('a', {
+                id: mapId + 'Tab',
+                tabindex: 0,
+                class: 'tab ' + (isActive ? 'active' : '')
+            });
+
+        tabButton.onclick = function () {
+            switchPanel(mapId);
+        };
+
+        tabButton.appendChild(textNode);
+
+        return tabButton;
+    }
+
+    function switchPanel(panelClass) {
+        var tabs = iframeBody.querySelectorAll('.tab'),
+            tbodyElements = iframeBody.querySelectorAll('.results-container tbody');
+
+        tabs.forEach(function (tab) {
+            if (tab.id === panelClass + 'Tab') {
+                tab.classList.add('active');
+            } else {
+                tab.classList.remove('active');
+            }
+        });
+
+        tbodyElements.forEach(function (tbody) {
+            if (tbody.classList.contains(panelClass)) {
+                tbody.classList.add('shown');
+            } else {
+                tbody.classList.remove('shown');
+            }
+        });
+
+        saveSettings({activePanel: panelClass});
+    }
+
     function getSettings(propertiesToGet, callback) {
         chrome.storage.local.get(propertiesToGet, callback);
     }
@@ -1214,17 +1226,20 @@
 
     function toggleInfo() {
         var informationPanel = iframeContentDocument.querySelector('.' + informationElementClass),
+            tabsBar = iframeContentDocument.querySelector('.' + tabsBarClass),
             results = iframeContentDocument.getElementById(contrastCheckerWrapperId),
             selectorPanel = iframeContentDocument.querySelector('.' + selectorBarClass),
             colorToolsPanel = iframeContentDocument.querySelector('.' + colorToolsClass);
 
         if (informationPanel.classList.contains('hide')) {
             informationPanel.classList.remove('hide');
+            tabsBar.classList.add('hide');
             results.classList.add('hide');
             selectorPanel.classList.add('hide');
             colorToolsPanel.classList.add('hide');
         } else {
             informationPanel.classList.add('hide');
+            tabsBar.classList.remove('hide');
             results.classList.remove('hide');
             selectorPanel.classList.remove('hide');
             colorToolsPanel.classList.remove('hide');
