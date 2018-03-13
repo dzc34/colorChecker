@@ -1,6 +1,6 @@
 (function () {
     var body, bodyParent, iframeWidget, iframeContentDocument, iframeBody, highlightedElements, settings,
-        contrastLevelChecker, autoRefreshCheck,
+        contrastLevelChecker, autoRefreshCheck, screenCaptureCanvas,
         largeSize = 24,
         normalSize = 18.6667,
         baseURL = chrome.extension.getURL('html/'),
@@ -24,9 +24,6 @@
             UP_ARROW: 38,
             DOWN_ARROW: 40
         },
-        visualHelperStyle = 'display: inline-block; position: absolute; border: 10px solid; ' +
-            'border-color: transparent transparent transparent red; margin-left: -10px; margin-top: -10px; ' +
-            'transform: rotate(45deg)',
         visibleElementsTabText = 'visible elements',
         hiddenElementsTabText = 'hidden elements',
         widgetTitleText = 'WCAG 2.0 - Contrast checker',
@@ -1335,7 +1332,8 @@
         }
     }
 
-    var jarl;
+    var jarl, sample;
+    var tmp = debounceFn(mousewheelHandler, false);
 
     function canvasImg() {
         if (!jarl) {
@@ -1343,39 +1341,39 @@
         }
 
         document.addEventListener('mousemove', mousemoveHandler);
-        document.addEventListener('mouseleave', removeMousemoveHandler);
+        document.addEventListener('click', removeMousemoveHandler);
+        document.addEventListener('mouseenter', mouseenterHandler);
+        document.addEventListener('mousewheel', tmp);
+        document.addEventListener('wheel', tmp);
+        sample = createElement('div', {style: 'position: fixed; top: 0; left: 350px; width:10px; height: 10px; z-index: 100000'})
+        body.appendChild(sample)
 
         sendMessageToBackgroundScript({
             action: 'screenCapture'
         });
     }
 
-    function generateCanvasCapture(capture) {
-        var screenCaptureCanvas, ctx, image;
-
-        removeCanvasCapture();
-        screenCaptureCanvas = createElement('canvas', {
-            width: body.clientWidth,
-            height: document.documentElement.clientHeight,
-            id: screenCaptureCanvasId,
-            style: 'position: fixed; top: 0; left: 350px; z-index: 10000'
+    function mouseenterHandler() {
+        sendMessageToBackgroundScript({
+            action: 'screenCapture'
         });
-
-        ctx = screenCaptureCanvas.getContext('2d');
-        image = new Image();
-
-        // body.appendChild(screenCaptureCanvas);
-
-        image.onload = function () {
-            ctx.drawImage(image, 350, 0, document.documentElement.clientWidth, window.innerHeight, 0, 0, document.documentElement.clientWidth, window.innerHeight);
-        };
-
-        image.src = capture;
-
     }
 
+
     function mousemoveHandler(event) {
-        // console.log(event);
+        var xCoord = event.clientX - 350,
+            yCoord = event.clientY,
+            ctx = screenCaptureCanvas.getContext('2d'),
+            pixelData = ctx.getImageData(xCoord, yCoord, 1, 1).data,
+            hexColor = RGBToHex({r: pixelData[0], g: pixelData[1], b: pixelData[2]});
+
+        sample.style.backgroundColor = hexColor;
+    }
+
+    function mousewheelHandler(event) {
+        sendMessageToBackgroundScript({
+            action: 'screenCapture'
+        });
     }
 
     function removeMousemoveHandler(event) {
@@ -1383,8 +1381,39 @@
             jarl();
             jarl = undefined;
             document.removeEventListener('mousemove', mousemoveHandler);
-            document.removeEventListener('mouseleave', removeMousemoveHandler);
+            document.removeEventListener('click', removeMousemoveHandler);
+            document.removeEventListener('mouseenter', mouseenterHandler);
+            document.removeEventListener('mousewheel', tmp);
+            document.removeEventListener('wheel', tmp);
+            preventHandler(event);
         }
+    }
+
+    function generateCanvasCapture(capture) {
+        var ctx, image;
+
+        if (screenCaptureCanvas) {
+            ctx = screenCaptureCanvas.getContext('2d');
+            ctx.clearRect(0, 0, screenCaptureCanvas.width, screenCaptureCanvas.height);
+        }
+
+        screenCaptureCanvas = createElement('canvas', {
+            width: body.clientWidth,
+            height: document.documentElement.clientHeight,
+            id: screenCaptureCanvasId,
+            style: 'position: fixed; top: 400px; left: 350px; z-index: 10000'
+        });
+
+        ctx = screenCaptureCanvas.getContext('2d');
+        image = new Image();
+
+//        body.appendChild(screenCaptureCanvas);
+
+        image.onload = function () {
+            ctx.drawImage(image, -350, 0, body.clientWidth + 350, document.documentElement.clientHeight);
+        };
+
+        image.src = capture;
     }
 
     function removeCanvasCapture() {
@@ -1396,29 +1425,28 @@
     }
 
     function disableAllUserEvents() {
-        const events = ['click', 'contextmenu', 'dblclick', 'mousedown', 'mouseenter', 'mouseleave', 'mousemove',
-            'mouseover', 'mouseout', 'mouseup', 'keydown', 'keypress', 'keyup', 'blur', 'change', 'focus', 'focusin',
+        const events = ['contextmenu', 'dblclick', 'mousedown', 'mouseup',
+            'mouseover', 'mouseout', 'keydown', 'keypress', 'keyup', 'blur', 'change', 'focus', 'focusin',
             'focusout', 'input', 'invalid', 'reset', 'search', 'select', 'submit', 'drag', 'dragend', 'dragenter',
-            'dragleave', 'dragover', 'dragstart', 'drop', 'copy', 'cut', 'paste', 'mousewheel', 'wheel', 'touchcancel',
+            'dragleave', 'dragover', 'dragstart', 'drop', 'copy', 'cut', 'paste', 'touchcancel',
             'touchend', 'touchmove', 'touchstart'];
 
-        function handler(event) {
-            event.stopPropagation();
-            event.preventDefault();
-
-            return false;
-        }
-
         for (var i = 0, l = events.length; i < l; i++) {
-            document.addEventListener(events[i], handler, true);
+            document.addEventListener(events[i], preventHandler, true);
         }
 
         return function () {
             for (var i = 0, l = events.length; i < l; i++) {
-                document.removeEventListener(events[i], handler, true);
+                document.removeEventListener(events[i], preventHandler, true);
             }
-            ;
-        };
+        }
+    }
+
+    function preventHandler(event) {
+        event.stopPropagation();
+        event.preventDefault();
+
+        return false;
     }
 
 })();
