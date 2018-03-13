@@ -1,9 +1,10 @@
 (function () {
     var body, bodyParent, iframeWidget, iframeContentDocument, iframeBody, highlightedElements, settings,
         contrastLevelChecker, autoRefreshCheck, screenCaptureCanvas,
-        recoverDocumentEvents,
+        recoverDocumentEvents, activeField,
         largeSize = 24,
         normalSize = 18.6667,
+        widgetWidth = 350,
         baseURL = chrome.extension.getURL('html/'),
         contrastCheckerIframeWrapperId = 'contrastCheckerIframeWrapper',
         contrastCheckerWrapperId = 'contrastCheckerWrapper',
@@ -583,10 +584,8 @@
     function createWidgetControlButtons() {
         var navigationBar = createElement('div', {class: navigationBarClass}),
             infoButton = createElement('button', {content: 'info', id: 'info', events: {click: toggleInfo}}),
-            closeButton = createElement('button', {content: 'close', id: 'closer', events: {click: closeWidget}}),
-            canvas = createElement('button', {content: 'canvas', id: 'canvas', events: {click: canvasImg}});
+            closeButton = createElement('button', {content: 'close', id: 'closer', events: {click: closeWidget}});
 
-        navigationBar.appendChild(canvas);
         navigationBar.appendChild(infoButton);
         navigationBar.appendChild(closeButton);
 
@@ -742,7 +741,15 @@
                     value: defaultColor,
                     placeholder: 'ex. ' + defaultColor
                 }),
-                colorSelector = createElement('input', {id: inputId + '-selector', type: 'color', value: defaultColor});
+                colorSelector = createElement('input', {id: inputId + '-selector', type: 'color', value: defaultColor}),
+                eyeDropper = createElement('button', {
+                    class: 'eyeDropper', events: {
+                        click: function () {
+                            activeField = inputField;
+                            canvasImg();
+                        }
+                    }
+                });
 
             inputField.onchange = function () {
                 if (!isValidHex(this.value)) {
@@ -769,6 +776,7 @@
             };
 
             wrapper.appendChild(inputLabel);
+            wrapper.appendChild(eyeDropper);
             wrapper.appendChild(inputField);
             wrapper.appendChild(colorSelector);
 
@@ -1341,13 +1349,12 @@
         }
 
         document.addEventListener('mousemove', mousemoveHandler);
-        document.addEventListener('click', removeMousemoveHandler);
-        document.addEventListener('mouseenter', takeScreenCaptureDebounced());
-        document.addEventListener('mousewheel', takeScreenCaptureDebounced());
-        document.addEventListener('wheel', takeScreenCaptureDebounced());
+        document.addEventListener('click', clickHandler);
+        document.addEventListener('mouseenter', takeScreenCapture);
+        document.addEventListener('mousewheel', wheelhandler);
+        document.addEventListener('wheel', wheelhandler);
 
-        sample = createElement('div', {style: 'position: fixed; top: 0; left: 350px; width:10px; height: 10px; z-index: 100000'});
-        body.appendChild(sample);
+        sample = createElement('div', {style: 'position: fixed; top: 0; left: ' + widgetWidth + 'px; width:10px; height: 10px; z-index: 100000'});
 
         sendMessageToBackgroundScript({
             action: 'screenCapture'
@@ -1360,32 +1367,48 @@
         });
     }
 
-    function takeScreenCaptureDebounced() {
-        return debounceFn(takeScreenCapture, false);
+    var wheelActived;
+
+    function wheelhandler() {
+        wheelActived = true;
     }
 
 
     function mousemoveHandler(event) {
-        var xCoord = event.clientX - 350,
-            yCoord = event.clientY,
-            ctx = screenCaptureCanvas.getContext('2d'),
-            pixelData = ctx.getImageData(xCoord, yCoord, 1, 1).data,
+        var xCoord, yCoord, ctx, pixelData, hexColor;
+
+        if (!wheelActived) {
+            xCoord = event.clientX - widgetWidth;
+            yCoord = event.clientY;
+            ctx = screenCaptureCanvas.getContext('2d');
+            pixelData = ctx.getImageData(xCoord, yCoord, 1, 1).data;
             hexColor = RGBToHex({r: pixelData[0], g: pixelData[1], b: pixelData[2]});
 
-        sample.style.backgroundColor = hexColor;
+            activeField.value = hexColor;
+            if (activeField.id === 'foreground') {
+                setStyleInExampleText('color', hexColor);
+            } else {
+                setStyleInExampleText('backgroundColor', hexColor);
+            }
+            singleEvaluation();
+        } else {
+            takeScreenCapture();
+            wheelActived = false;
+        }
+
     }
 
-    function removeMousemoveHandler(event) {
+    function clickHandler(event) {
         if (recoverDocumentEvents) {
             recoverDocumentEvents();
             recoverDocumentEvents = undefined;
-            document.removeEventListener('mousemove', mousemoveHandler);
-            document.removeEventListener('click', removeMousemoveHandler);
-            document.removeEventListener('mouseenter', takeScreenCaptureDebounced());
-            document.removeEventListener('mousewheel', takeScreenCaptureDebounced());
-            document.removeEventListener('wheel', takeScreenCaptureDebounced());
-            preventHandler(event);
         }
+        document.removeEventListener('mousemove', mousemoveHandler);
+        document.removeEventListener('click', clickHandler);
+        document.removeEventListener('mouseenter', takeScreenCapture);
+        document.removeEventListener('mousewheel', wheelhandler);
+        document.removeEventListener('wheel', wheelhandler);
+        preventHandler(event);
     }
 
     function generateCanvasCapture(capture) {
@@ -1400,16 +1423,16 @@
             width: body.clientWidth,
             height: document.documentElement.clientHeight,
             id: screenCaptureCanvasId,
-            style: 'position: fixed; top: 400px; left: 350px; z-index: 10000'
+            style: 'position: fixed; top: 400px; left: ' + widgetWidth + 'px; z-index: 10000'
         });
 
         ctx = screenCaptureCanvas.getContext('2d');
         image = new Image();
 
-        body.appendChild(screenCaptureCanvas);
+//        body.appendChild(screenCaptureCanvas);
 
         image.onload = function () {
-            ctx.drawImage(image, -350, 0, body.clientWidth + 350, document.documentElement.clientHeight);
+            ctx.drawImage(image, -widgetWidth, 0, body.clientWidth + widgetWidth, document.documentElement.clientHeight);
         };
 
         image.src = capture;
