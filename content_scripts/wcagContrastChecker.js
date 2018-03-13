@@ -1,6 +1,8 @@
 (function () {
     var body, bodyParent, iframeWidget, iframeContentDocument, iframeBody, highlightedElements, settings,
         contrastLevelChecker, autoRefreshCheck,
+        largeSize = 24,
+        normalSize = 18.6667,
         baseURL = chrome.extension.getURL('html/'),
         contrastCheckerIframeWrapperId = 'contrastCheckerIframeWrapper',
         contrastCheckerWrapperId = 'contrastCheckerWrapper',
@@ -30,9 +32,12 @@
         widgetTitleText = 'WCAG 2.0 - Contrast checker',
         informationElementClass = 'information',
         tabsBarClass = 'tabs-bar',
+        refreshButtonClass = 'refresh-button',
         selectorBarClass = 'selector-bar',
         navigationBarClass = 'navigation-bar',
-        colorToolsClass = 'color-tools';
+        colorToolsClass = 'color-tools',
+        exampleTextId = 'exampleText',
+        screenCaptureCanvasId = 'screenCaptureCanvas';
 
 
     if (window.hasContrastColorCheckerRun) {
@@ -271,21 +276,16 @@
             if (elements) {
                 highlightedElements = elements;
                 elements.forEach(function (element) {
-                    if (element.parentNode) {
-                        element.parentNode.insertBefore(createElement('span', {
-                            class: 'visualHelper', style: visualHelperStyle
-                        }), element);
-                        element.style.boxShadow = 'inset 0 0 0 1px #F00';
-                    }
+                    element.style.boxShadow = 'inset 0 0 0 2px #F00';
                 });
 
                 iframeContentDocument.getElementById('foreground').value = foregroundColor;
                 iframeContentDocument.getElementById('foreground-selector').value = foregroundColor;
-                iframeContentDocument.getElementById('exampleText').style.color = foregroundColor;
+                setStyleInExampleText('color', foregroundColor);
 
                 iframeContentDocument.getElementById('background').value = backgroundColor;
                 iframeContentDocument.getElementById('background-selector').value = backgroundColor;
-                iframeContentDocument.getElementById('exampleText').style.backgroundColor = backgroundColor;
+                setStyleInExampleText('backgroundColor', backgroundColor);
 
                 singleEvaluation();
             }
@@ -295,11 +295,6 @@
     function removeHighlightFromElements(elements) {
         return function () {
             highlightedElements = [];
-            var visualHelpers = document.querySelectorAll('.visualHelper');
-
-            for (var i = visualHelpers.length - 1; i >= 0; i--) {
-                visualHelpers[i].parentNode.removeChild(visualHelpers[i]);
-            }
 
             if (elements) {
                 elements.forEach(function (element) {
@@ -352,7 +347,13 @@
             helpContent = createHelpContent(),
             navigationBar = createWidgetControlButtons(),
             selectorBar = createSelectorBar(),
-            tabsBar = createTabsBar();
+            tabsBar = createTabsBar(),
+            refreshButton = createElement('button', {
+                innerHTML: '<span>refresh results</span>',
+                class: refreshButtonClass,
+                events: {click: refreshWidget}
+            });
+
 
         bodyParent.insertBefore(iframeWidget, body);
         bodyParent.setAttribute('data-contrast-checker-active', 'true');
@@ -376,10 +377,11 @@
 
                 iframeBody.appendChild(widgetTitle);
                 iframeBody.appendChild(navigationBar);
+                iframeBody.appendChild(selectorBar);
                 iframeBody.appendChild(tabsBar);
                 widgetWrapper.appendChild(widgetContent);
                 iframeBody.appendChild(widgetWrapper);
-                iframeBody.appendChild(selectorBar);
+                iframeBody.appendChild(refreshButton);
                 iframeBody.appendChild(colorTools);
                 iframeBody.appendChild(helpContent);
 
@@ -405,6 +407,8 @@
         removeHighlightFromElements(highlightedElements)();
         sendMessageToBackgroundScript({action: 'close'});
         saveSettings({activePanel: defaultActivePanel});
+
+        removeCanvasCapture();
     }
 
     function updateWidget(widgetContent) {
@@ -589,12 +593,6 @@
         navigationBar.appendChild(closeButton);
 
         return navigationBar;
-
-        function canvasImg() {
-            sendMessageToBackgroundScript({
-                action: 'screenCapture'
-            });
-        }
     }
 
     function createTabsBar() {
@@ -626,12 +624,7 @@
 
     function createSelectorBar() {
         var selectorBar = createElement('div', {class: selectorBarClass}),
-            refreshButton = createElement('button', {
-                innerHTML: '<span>refresh results</span>',
-                class: 'refresh-button',
-                events: {click: refreshWidget}
-            }),
-            levelSwitcherLabel = createElement('label', {content: 'WCAG level: ', for: 'levelSwitcher'}),
+            levelSwitcherLabel = createElement('label', {content: 'Level: ', for: 'levelSwitcher'}),
             levelSwitcher = createSwitcher(
                 [
                     {content: 'AA', value: 'AA'},
@@ -653,7 +646,6 @@
                 'refreshSwitcher',
                 switchAutoRefresh);
 
-        selectorBar.appendChild(refreshButton);
         selectorBar.appendChild(levelSwitcherLabel);
         levelSwitcherLabel.appendChild(levelSwitcher);
         selectorBar.appendChild(refreshSwitcherLabel);
@@ -697,12 +689,15 @@
 
     function createColorTools() {
         var colorTools = createElement('div', {class: colorToolsClass}),
+            colorToolsTitle = createElement('h2', {content: 'Color tool'}),
             inputWrapper = createElement('div', {class: 'color-input'}),
             foregroundInput = createInputForColor('Foreground color (hex.)', 'foreground', defaultForegroundColor),
             backgroundInput = createInputForColor('Background color (hex.)', 'background', defaultBackgroundColor),
             exampleText = createElement('div', {
-                content: 'Example text',
-                id: 'exampleText',
+                innerHTML: '<span style="font-size: ' + normalSize + 'px">14pt</span>' +
+                '<span style="font-size: ' + normalSize + 'px; font-weight: bold">14pt bold</span>' +
+                '<span style="font-size: ' + largeSize + 'px">18pt</span>',
+                id: exampleTextId,
                 style: 'color: ' + defaultForegroundColor + '; background-color: ' + defaultBackgroundColor
             }),
             validationTable = createTable(
@@ -726,6 +721,8 @@
                 ]
             );
 
+        colorTools.appendChild(colorToolsTitle);
+
         inputWrapper.appendChild(foregroundInput);
         inputWrapper.appendChild(backgroundInput);
         colorTools.appendChild(inputWrapper);
@@ -733,8 +730,8 @@
         tableBody.appendChild(rowAA);
         tableBody.appendChild(rowAAA);
 
-        colorTools.appendChild(validationTable);
         colorTools.appendChild(exampleText);
+        colorTools.appendChild(validationTable);
 
         return colorTools;
 
@@ -756,9 +753,9 @@
                 colorSelector.value = hexShorthandToExtended(this.value);
 
                 if (inputId === 'foreground') {
-                    iframeContentDocument.getElementById('exampleText').style.color = this.value;
+                    setStyleInExampleText('color', this.value);
                 } else {
-                    iframeContentDocument.getElementById('exampleText').style.backgroundColor = this.value;
+                    setStyleInExampleText('backgroundColor', this.value);
                 }
                 singleEvaluation();
             };
@@ -766,9 +763,9 @@
             colorSelector.onchange = function () {
                 inputField.value = this.value;
                 if (inputId === 'foreground') {
-                    iframeContentDocument.getElementById('exampleText').style.color = this.value;
+                    setStyleInExampleText('color', this.value);
                 } else {
-                    iframeContentDocument.getElementById('exampleText').style.backgroundColor = this.value;
+                    setStyleInExampleText('backgroundColor', this.value);
                 }
                 singleEvaluation();
             };
@@ -865,8 +862,6 @@
     function evaluateColorContrastFromElement(element) {
         var foregroundColor, fontSize, fontWeight, isBold, textType, contrast, evaluation,
             getComputedStyle = document.defaultView.getComputedStyle(element, null),
-            largeSize = 24,
-            normalSize = 18.6667,
             backgroundColor = backgroundFromSelfOrAncestor(element),
             isVisible = backgroundColor.isVisible && isElementVisible(element);
 
@@ -1242,14 +1237,15 @@
             tabsBar = iframeContentDocument.querySelector('.' + tabsBarClass),
             results = iframeContentDocument.getElementById(contrastCheckerWrapperId),
             selectorPanel = iframeContentDocument.querySelector('.' + selectorBarClass),
-            colorToolsPanel = iframeContentDocument.querySelector('.' + colorToolsClass);
+            colorToolsPanel = iframeContentDocument.querySelector('.' + colorToolsClass),
+            refreshButton = iframeContentDocument.querySelector('.' + refreshButtonClass);
 
         if (informationPanel.classList.contains('hide')) {
             removeClassToElements('hide', [informationPanel]);
-            addClassToElements('hide', [tabsBar, results, selectorPanel, colorToolsPanel]);
+            addClassToElements('hide', [tabsBar, results, selectorPanel, refreshButton, colorToolsPanel]);
         } else {
             addClassToElements('hide', [informationPanel]);
-            removeClassToElements('hide', [tabsBar, results, selectorPanel, colorToolsPanel])
+            removeClassToElements('hide', [tabsBar, results, selectorPanel, refreshButton, colorToolsPanel])
         }
     }
 
@@ -1263,6 +1259,10 @@
         elements.forEach(function (element) {
             element.classList.remove(classValue);
         });
+    }
+
+    function setStyleInExampleText(cssProperty, cssValue) {
+        iframeContentDocument.getElementById(exampleTextId).style[cssProperty] = cssValue;
     }
 
     function debounceFn(func, executeAtTheBeginning, wait) {
@@ -1335,20 +1335,90 @@
         }
     }
 
+    var jarl;
+
+    function canvasImg() {
+        if (!jarl) {
+            jarl = disableAllUserEvents();
+        }
+
+        document.addEventListener('mousemove', mousemoveHandler);
+        document.addEventListener('mouseleave', removeMousemoveHandler);
+
+        sendMessageToBackgroundScript({
+            action: 'screenCapture'
+        });
+    }
+
     function generateCanvasCapture(capture) {
-        var canvas = createElement('canvas', {
-                width: body.clientWidth,
-                height: document.documentElement.clientHeight
-            }),
-            ctx = canvas.getContext('2d'),
-            image = new Image();
+        var screenCaptureCanvas, ctx, image;
 
-        body.appendChild(canvas)
+        removeCanvasCapture();
+        screenCaptureCanvas = createElement('canvas', {
+            width: body.clientWidth,
+            height: document.documentElement.clientHeight,
+            id: screenCaptureCanvasId,
+            style: 'position: fixed; top: 0; left: 350px; z-index: 10000'
+        });
 
-        image.onload = function() {
+        ctx = screenCaptureCanvas.getContext('2d');
+        image = new Image();
+
+        // body.appendChild(screenCaptureCanvas);
+
+        image.onload = function () {
             ctx.drawImage(image, 350, 0, document.documentElement.clientWidth, window.innerHeight, 0, 0, document.documentElement.clientWidth, window.innerHeight);
         };
 
         image.src = capture;
+
     }
+
+    function mousemoveHandler(event) {
+        // console.log(event);
+    }
+
+    function removeMousemoveHandler(event) {
+        if (jarl) {
+            jarl();
+            jarl = undefined;
+            document.removeEventListener('mousemove', mousemoveHandler);
+            document.removeEventListener('mouseleave', removeMousemoveHandler);
+        }
+    }
+
+    function removeCanvasCapture() {
+        var screenCaptureCanvas = document.getElementById(screenCaptureCanvasId);
+
+        if (screenCaptureCanvas) {
+            screenCaptureCanvas.parentNode.removeChild(screenCaptureCanvas);
+        }
+    }
+
+    function disableAllUserEvents() {
+        const events = ['click', 'contextmenu', 'dblclick', 'mousedown', 'mouseenter', 'mouseleave', 'mousemove',
+            'mouseover', 'mouseout', 'mouseup', 'keydown', 'keypress', 'keyup', 'blur', 'change', 'focus', 'focusin',
+            'focusout', 'input', 'invalid', 'reset', 'search', 'select', 'submit', 'drag', 'dragend', 'dragenter',
+            'dragleave', 'dragover', 'dragstart', 'drop', 'copy', 'cut', 'paste', 'mousewheel', 'wheel', 'touchcancel',
+            'touchend', 'touchmove', 'touchstart'];
+
+        function handler(event) {
+            event.stopPropagation();
+            event.preventDefault();
+
+            return false;
+        }
+
+        for (var i = 0, l = events.length; i < l; i++) {
+            document.addEventListener(events[i], handler, true);
+        }
+
+        return function () {
+            for (var i = 0, l = events.length; i < l; i++) {
+                document.removeEventListener(events[i], handler, true);
+            }
+            ;
+        };
+    }
+
 })();

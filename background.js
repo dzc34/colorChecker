@@ -35,7 +35,7 @@ function connected(portFromCS) {
 }
 
 function screenCapture() {
-    chrome.tabs.captureVisibleTab({format: 'png'}, sendCaptureToContentScript);
+    chrome.tabs.captureVisibleTab({format: 'png', quality: 100}, sendCaptureToContentScript);
 
     function sendCaptureToContentScript(data) {
         sendMessage({

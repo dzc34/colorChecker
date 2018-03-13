@@ -47,7 +47,7 @@ h3 {
 
 .tabs-bar {
     width: 98%;
-    margin: 10px auto 0;
+    margin: 0 auto;
 }
 
 #contrastCheckerWrapper {
@@ -55,7 +55,7 @@ h3 {
     border: 1px #DDD solid;
     border-top: none;
     box-sizing: border-box;
-    margin: 0 auto 3px;
+    margin: 0 auto -1px;
     background: #FFF;
 }
 
@@ -106,6 +106,13 @@ table {
 
 th, td {
     vertical-align: top;
+}
+
+th {
+    padding: 6px 0;
+}
+
+td {
     padding: 4px 0;
 }
 
@@ -123,7 +130,7 @@ th[colspan="4"] {
     background: #FFFFFF;
     border: 1px #DDD inset;
     box-sizing: border-box;
-    margin: 10px auto;
+    margin: 10px auto 0;
 }
 
 .results-container {
@@ -268,6 +275,11 @@ tbody tr:focus {
 .selector-bar label {
     display: inline-block;
     margin: 8px 5px;
+    float: left;
+}
+
+.selector-bar label + label {
+    float: right;
 }
 
 #info,
@@ -322,29 +334,25 @@ tbody tr:focus {
 .color-tools {
     background: #FFFFFF;
     width: 98%;
-    border: 1px #DDD inset;
+    border: 1px #DDD solid;
     box-sizing: border-box;
-    margin: 3px auto;
+    margin: 10px auto;
 }
 
 .color-tools .color-input {
     width: 98%;
-    margin: 5px auto;
+    margin: 5px auto 10px;
 }
 
 .color-tool {
     display: inline-block;
-    margin: 0 1% 0 0;
-    width: 49%;
-}
-
-.color-tool + .color-tool {
-    margin: 0 0 0 1%;
+    margin: 0 2%;
+    width: 46%;
 }
 
 .color-tool label {
-    font-weight: bold;
     display: block;
+    font-size: .9em;
 }
 
 .color-tool input {
@@ -364,13 +372,18 @@ tbody tr:focus {
 
 .color-tools #exampleText {
     width: 100%;
-    margin: 10px auto;
-    border: 1px dotted;
+    margin: auto;
+    border: 1px dashed;
     box-sizing: border-box;
     clear: both;
     text-align: center;
-    font-size: 16px;
-    padding: 10px;
+}
+
+.color-tools #exampleText span {
+    display: inline-block;
+    width: 33%;
+    box-sizing: border-box;
+    text-align: center;
 }
 
 .color-tools .single-validation th,
@@ -438,6 +451,12 @@ tbody tr:focus {
     display: block;
     width: 100%;
     line-height: 25px;
+}
+
+.refresh-button {
+    width: 98%;
+    margin: auto;
+    border-color: #DDD;
 }
 
 .navigation-content {
