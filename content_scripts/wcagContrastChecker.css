@@ -14,5 +14,4 @@ html[data-contrast-checker-active=true] body {
     overflow: auto !important;
     background: #FFFFFF !important;
     width: 350px !important;
-    box-shadow: 0 0 5px rgba(50, 50, 50, .7) !important;
 }

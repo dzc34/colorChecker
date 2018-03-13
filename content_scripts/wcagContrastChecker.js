@@ -67,9 +67,8 @@
                 openWidget(colorContrastWidget);
             }
         } else {
-            body.appendChild(createElement('img', {src: message.data}))
+            generateCanvasCapture(message.data);
         }
-
     });
 
     function getWidget() {
@@ -404,6 +403,7 @@
         widgetParent.removeChild(widget);
         widgetParent.removeAttribute('data-contrast-checker-active');
         removeHighlightFromElements(highlightedElements)();
+        sendMessageToBackgroundScript({action: 'close'});
         saveSettings({activePanel: defaultActivePanel});
     }
 
@@ -1333,5 +1333,22 @@
                 }
             }
         }
+    }
+
+    function generateCanvasCapture(capture) {
+        var canvas = createElement('canvas', {
+                width: body.clientWidth,
+                height: document.documentElement.clientHeight
+            }),
+            ctx = canvas.getContext('2d'),
+            image = new Image();
+
+        body.appendChild(canvas)
+
+        image.onload = function() {
+            ctx.drawImage(image, 350, 0, document.documentElement.clientWidth, window.innerHeight, 0, 0, document.documentElement.clientWidth, window.innerHeight);
+        };
+
+        image.src = capture;
     }
 })();
