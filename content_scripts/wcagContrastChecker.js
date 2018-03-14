@@ -1464,6 +1464,7 @@
         body.appendChild(screenCaptureCanvas);
 
         image.onload = function () {
+            console.log(image.width)
             // ctx.drawImage(image, -widgetWidth, screenCaptureCanvasInfoBarHeight, body.clientWidth + widgetWidth, document.documentElement.clientHeight);
             ctx.drawImage(
                 image,
@@ -1471,6 +1472,7 @@
                 image.width, image.height,
                 0, 0,
                 image.width, image.height);
+//            body.clientWidth + widgetWidth, document.documentElement.clientHeight);
         };
 
         image.src = capture;
