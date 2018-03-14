@@ -1,6 +1,6 @@
 (function () {
     var body, bodyParent, iframeWidget, iframeContentDocument, iframeBody, highlightedElements, settings,
-        contrastLevelChecker, autoRefreshCheck, screenCaptureCanvas,
+        contrastLevelChecker, autoRefreshCheck, screenCaptureCanvas, eyeDropperInfoBar,
         recoverDocumentEvents, activeField,
         largeSize = 24,
         normalSize = 18.6667,
@@ -36,7 +36,9 @@
         navigationBarClass = 'navigation-bar',
         colorToolsClass = 'color-tools',
         exampleTextId = 'exampleText',
-        screenCaptureCanvasId = 'screenCaptureCanvas';
+        screenCaptureCanvasId = 'screenCaptureCanvas',
+        eyeDropperInfoBarId = 'eyedropperInfo',
+        eyedropperActiveHTMLAttribute = 'data-contrast-checker-eyedropper-active';
 
 
     if (window.hasContrastColorCheckerRun) {
@@ -402,7 +404,11 @@
         widgetParent = widget.parentNode;
 
         widgetParent.removeChild(widget);
+        widgetParent.removeChild(eyeDropperInfoBar);
         widgetParent.removeAttribute('data-contrast-checker-active');
+
+        bodyParent.removeAttribute(eyedropperActiveHTMLAttribute);
+
         removeHighlightFromElements(highlightedElements)();
         sendMessageToBackgroundScript({action: 'close'});
         saveSettings({activePanel: defaultActivePanel});
@@ -821,6 +827,15 @@
 
 
         return helpContent;
+    }
+
+    function eyeDropperInformation() {
+        var eyeDropperInfo = createElement('div', {
+            id: eyeDropperInfoBarId,
+            innerHTML: '<span class="selected-eyedropper-color-sample"></span><span class="selected-eyedropper-color"></span>'
+        });
+
+        return eyeDropperInfo;
     }
 
     function getContrastDiff(foreground, background) {
@@ -1399,6 +1414,13 @@
     }
 
     function clickHandler(event) {
+        screenCaptureCanvas = undefined;
+
+        if(eyeDropperInfoBar){
+            eyeDropperInfoBar.parentNode.removeChild(eyeDropperInfoBar);
+            bodyParent.removeAttribute(eyedropperActiveHTMLAttribute);
+        }
+
         if (recoverDocumentEvents) {
             recoverDocumentEvents();
             recoverDocumentEvents = undefined;
@@ -1408,6 +1430,7 @@
         document.removeEventListener('mouseenter', takeScreenCapture);
         document.removeEventListener('mousewheel', wheelhandler);
         document.removeEventListener('wheel', wheelhandler);
+
         preventHandler(event);
     }
 
@@ -1417,16 +1440,18 @@
         if (screenCaptureCanvas) {
             ctx = screenCaptureCanvas.getContext('2d');
             ctx.clearRect(0, 0, screenCaptureCanvas.width, screenCaptureCanvas.height);
+        } else {
+            screenCaptureCanvas = createElement('canvas', {
+                width: body.clientWidth,
+                height: document.documentElement.clientHeight,
+                id: screenCaptureCanvasId,
+                style: 'position: fixed; top: 400px; left: ' + widgetWidth + 'px; z-index: 10000'
+            });
+            ctx = screenCaptureCanvas.getContext('2d');
+            eyeDropperInfoBar = eyeDropperInformation();
+            bodyParent.insertBefore(eyeDropperInfoBar, body);
+            bodyParent.setAttribute(eyedropperActiveHTMLAttribute, 'true');
         }
-
-        screenCaptureCanvas = createElement('canvas', {
-            width: body.clientWidth,
-            height: document.documentElement.clientHeight,
-            id: screenCaptureCanvasId,
-            style: 'position: fixed; top: 400px; left: ' + widgetWidth + 'px; z-index: 10000'
-        });
-
-        ctx = screenCaptureCanvas.getContext('2d');
         image = new Image();
 
 //        body.appendChild(screenCaptureCanvas);
