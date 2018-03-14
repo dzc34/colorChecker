@@ -1,10 +1,11 @@
 (function () {
     var body, bodyParent, iframeWidget, iframeContentDocument, iframeBody, highlightedElements, settings,
-        contrastLevelChecker, autoRefreshCheck, screenCaptureCanvas, eyeDropperInfoBar,
+        contrastLevelChecker, autoRefreshCheck, screenCaptureCanvas, eyeDropperInfoBar, scrollbarWidth,
         recoverDocumentEvents, activeField,
         largeSize = 24,
         normalSize = 18.6667,
         widgetWidth = 350,
+        screenCaptureCanvasInfoBarHeight = 26,
         baseURL = chrome.extension.getURL('html/'),
         contrastCheckerIframeWrapperId = 'contrastCheckerIframeWrapper',
         contrastCheckerWrapperId = 'contrastCheckerWrapper',
@@ -38,6 +39,7 @@
         exampleTextId = 'exampleText',
         screenCaptureCanvasId = 'screenCaptureCanvas',
         eyeDropperInfoBarId = 'eyedropperInfo',
+        extensionHTMLAttributeActive = 'data-contrast-checker-active',
         eyedropperActiveHTMLAttribute = 'data-contrast-checker-eyedropper-active';
 
 
@@ -357,7 +359,7 @@
 
 
         bodyParent.insertBefore(iframeWidget, body);
-        bodyParent.setAttribute('data-contrast-checker-active', 'true');
+        bodyParent.setAttribute(extensionHTMLAttributeActive, 'true');
         iframeWidgetContentWindow = iframeWidget.contentWindow;
         iframeWidgetContentWindow.stop();
         iframeContentDocument = iframeWidgetContentWindow.document;
@@ -404,10 +406,12 @@
         widgetParent = widget.parentNode;
 
         widgetParent.removeChild(widget);
-        widgetParent.removeChild(eyeDropperInfoBar);
-        widgetParent.removeAttribute('data-contrast-checker-active');
-
-        bodyParent.removeAttribute(eyedropperActiveHTMLAttribute);
+        if (eyeDropperInfoBar) {
+            widgetParent.removeChild(eyeDropperInfoBar);
+            eyeDropperInfoBar = undefined;
+        }
+        widgetParent.removeAttribute(extensionHTMLAttributeActive);
+        widgetParent.removeAttribute(eyedropperActiveHTMLAttribute);
 
         removeHighlightFromElements(highlightedElements)();
         sendMessageToBackgroundScript({action: 'close'});
@@ -832,7 +836,9 @@
     function eyeDropperInformation() {
         var eyeDropperInfo = createElement('div', {
             id: eyeDropperInfoBarId,
-            innerHTML: '<span class="selected-eyedropper-color-sample"></span><span class="selected-eyedropper-color"></span>'
+            innerHTML: '<span class="selected-eyedropper-color-sample"></span>' +
+            '<span class="selected-eyedropper-color"></span>' +
+            '<span class="scroll-bar-width-detector"></span>'
         });
 
         return eyeDropperInfo;
@@ -1388,12 +1394,11 @@
         wheelActived = true;
     }
 
-
     function mousemoveHandler(event) {
         var xCoord, yCoord, ctx, pixelData, hexColor;
 
         if (!wheelActived) {
-            xCoord = event.clientX - widgetWidth;
+            xCoord = event.clientX;
             yCoord = event.clientY;
             ctx = screenCaptureCanvas.getContext('2d');
             pixelData = ctx.getImageData(xCoord, yCoord, 1, 1).data;
@@ -1410,13 +1415,13 @@
             takeScreenCapture();
             wheelActived = false;
         }
-
     }
 
     function clickHandler(event) {
+        preventHandler(event);
         screenCaptureCanvas = undefined;
 
-        if(eyeDropperInfoBar){
+        if (eyeDropperInfoBar) {
             eyeDropperInfoBar.parentNode.removeChild(eyeDropperInfoBar);
             bodyParent.removeAttribute(eyedropperActiveHTMLAttribute);
         }
@@ -1430,48 +1435,58 @@
         document.removeEventListener('mouseenter', takeScreenCapture);
         document.removeEventListener('mousewheel', wheelhandler);
         document.removeEventListener('wheel', wheelhandler);
-
-        preventHandler(event);
     }
 
     function generateCanvasCapture(capture) {
-        var ctx, image;
+        var ctx, image, scrollBarWidthDetector;
 
         if (screenCaptureCanvas) {
             ctx = screenCaptureCanvas.getContext('2d');
             ctx.clearRect(0, 0, screenCaptureCanvas.width, screenCaptureCanvas.height);
         } else {
             screenCaptureCanvas = createElement('canvas', {
-                width: body.clientWidth,
+                width: body.clientWidth + widgetWidth,
                 height: document.documentElement.clientHeight,
                 id: screenCaptureCanvasId,
                 style: 'position: fixed; top: 400px; left: ' + widgetWidth + 'px; z-index: 10000'
             });
             ctx = screenCaptureCanvas.getContext('2d');
+
             eyeDropperInfoBar = eyeDropperInformation();
             bodyParent.insertBefore(eyeDropperInfoBar, body);
             bodyParent.setAttribute(eyedropperActiveHTMLAttribute, 'true');
+
+            scrollBarWidthDetector = eyeDropperInfoBar.querySelector('.scroll-bar-width-detector');
+            scrollbarWidth = scrollBarWidthDetector.offsetWidth - scrollBarWidthDetector.clientWidth;
         }
         image = new Image();
 
-//        body.appendChild(screenCaptureCanvas);
+        body.appendChild(screenCaptureCanvas);
 
         image.onload = function () {
-            ctx.drawImage(image, -widgetWidth, 0, body.clientWidth + widgetWidth, document.documentElement.clientHeight);
+            // ctx.drawImage(image, -widgetWidth, screenCaptureCanvasInfoBarHeight, body.clientWidth + widgetWidth, document.documentElement.clientHeight);
+            ctx.drawImage(
+                image,
+                0, 0,
+                image.width, image.height,
+                0, 0,
+                image.width, image.height);
         };
 
         image.src = capture;
     }
 
     function removeCanvasCapture() {
-        var screenCaptureCanvas = document.getElementById(screenCaptureCanvasId);
+        var screenCaptureCanvasInfoBar = document.getElementById(screenCaptureCanvasId);
 
-        if (screenCaptureCanvas) {
-            screenCaptureCanvas.parentNode.removeChild(screenCaptureCanvas);
+        if (screenCaptureCanvasInfoBar) {
+            screenCaptureCanvasInfoBar.parentNode.removeChild(screenCaptureCanvasInfoBar);
         }
+
+        screenCaptureCanvas = undefined;
     }
 
-    function disableAllUserEvents() {
+    function disableAllUserEvents(target) {
         const events = ['contextmenu', 'dblclick', 'mousedown', 'mouseup',
             'mouseover', 'mouseout', 'keydown', 'keypress', 'keyup', 'blur', 'change', 'focus', 'focusin',
             'focusout', 'input', 'invalid', 'reset', 'search', 'select', 'submit', 'drag', 'dragend', 'dragenter',

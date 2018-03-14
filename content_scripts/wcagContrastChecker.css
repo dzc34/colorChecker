@@ -16,16 +16,27 @@ html[data-contrast-checker-active=true] body {
     width: 350px !important;
 }
 
+/*
 html[data-contrast-checker-eyedropper-active=true] body {
     margin-top: 30px;
+    cursor: url(../html/icons/eyedropper-icon.png), auto;
 }
 html[data-contrast-checker-eyedropper-active=true] #eyedropperInfo {
     position: fixed;
     top: 2px;
     left: 400px;
     height: 26px;
-    width: auto;
+    width: 300px;
+    background-color: red;
 }
 html[data-contrast-checker-eyedropper-active=true] #eyedropperInfo span{
     display: inline-block;
 }
+
+html[data-contrast-checker-eyedropper-active=true] #eyedropperInfo span.scroll-bar-width-detector{
+    width: 100px;
+    height: 100px;
+    overflow: scroll;
+    position: absolute;
+    top: -9999px;
+}*/
